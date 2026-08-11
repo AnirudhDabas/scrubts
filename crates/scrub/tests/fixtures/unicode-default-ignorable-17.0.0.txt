@@ -1,0 +1,41 @@
+# Unicode 17.0.0 Default_Ignorable_Code_Point test extract.
+#
+# These property records are copied from DerivedCoreProperties-17.0.0.txt,
+# whose complete authoritative file has pinned SHA-256
+# 24c7fed1195c482faaefd5c1e7eb821c5ee1fb6de07ecdbaa64b56a99da22c08.
+# For scrub.ts's canonical serialization of only the ordered 27 DICP ranges,
+# encode each actual start and end as uppercase six-digit hex START..END plus LF,
+# including singleton ranges. The resulting SHA-256 is
+# 5d2e0f0aaa2d84955d13925234b7f806a613e25f0ab0fc9666b32b9120a6a42c.
+# Source: https://www.unicode.org/Public/17.0.0/ucd/DerivedCoreProperties.txt
+# License: Unicode License V3, see UNICODE-LICENSE.txt in this directory.
+
+00AD          ; Default_Ignorable_Code_Point
+034F          ; Default_Ignorable_Code_Point
+061C          ; Default_Ignorable_Code_Point
+115F..1160    ; Default_Ignorable_Code_Point
+17B4..17B5    ; Default_Ignorable_Code_Point
+180B..180D    ; Default_Ignorable_Code_Point
+180E          ; Default_Ignorable_Code_Point
+180F          ; Default_Ignorable_Code_Point
+200B..200F    ; Default_Ignorable_Code_Point
+202A..202E    ; Default_Ignorable_Code_Point
+2060..2064    ; Default_Ignorable_Code_Point
+2065          ; Default_Ignorable_Code_Point
+2066..206F    ; Default_Ignorable_Code_Point
+3164          ; Default_Ignorable_Code_Point
+FE00..FE0F    ; Default_Ignorable_Code_Point
+FEFF          ; Default_Ignorable_Code_Point
+FFA0          ; Default_Ignorable_Code_Point
+FFF0..FFF8    ; Default_Ignorable_Code_Point
+1BCA0..1BCA3  ; Default_Ignorable_Code_Point
+1D173..1D17A  ; Default_Ignorable_Code_Point
+E0000         ; Default_Ignorable_Code_Point
+E0001         ; Default_Ignorable_Code_Point
+E0002..E001F  ; Default_Ignorable_Code_Point
+E0020..E007F  ; Default_Ignorable_Code_Point
+E0080..E00FF  ; Default_Ignorable_Code_Point
+E0100..E01EF  ; Default_Ignorable_Code_Point
+E01F0..E0FFF  ; Default_Ignorable_Code_Point
+
+# Total code points: 4174

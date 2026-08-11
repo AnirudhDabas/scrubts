@@ -44,8 +44,9 @@ code points. Its local Unicode License V3 text has SHA-256
 
 Milestone 1 provides the schema 0.1 report model and a single-file CLI that
 reports no findings. The Unicode 17.0.0 data and license are present locally,
-and the source ledger and scanner contract are prepared. No Unicode scanner or
-DICP fixture currently exists, and `CONFORMANCE.md` does not claim DICP support.
+and the source ledger and scanner contract are prepared. The fixture phase now
+provides reusable test-only inputs and typed expected observations, but no
+Unicode scanner exists and `CONFORMANCE.md` does not claim DICP support.
 
 ## Design
 
@@ -61,6 +62,37 @@ The finding mechanism and version identify DICP and Unicode 17.0.0. Human and
 machine wording remains neutral and does not aggregate this observation into a
 security, provenance, AI-authorship, or watermark claim. Inspection remains
 read-only.
+
+### Fixture phase
+
+Keep compact inputs in Rust fixture constructors so raw invalid bytes, repeated
+occurrence bounds, and the 64 KiB boundary case remain explicit without adding
+large binary files. Valid expected observations carry a status, total count,
+ordered byte/scalar location pairs, and truncation; invalid UTF-8 has a separate
+expected variant so it cannot accidentally acquire absence or prefix-only
+presence evidence.
+
+The future report comparison uses three deterministic evidence entries:
+`total_occurrence_count`, `locations_truncated`, and `locations`. The `locations`
+value is a compact JSON array whose objects contain integer `byte_offset` and
+`scalar_offset` fields in input order.
+
+Archive the 27 normative DICP records as a small licensed test extract. A
+test-only parser validates its shape and extent. The compact-membership test
+also hashes the ordered parsed ranges after encoding every actual start and end
+as uppercase six-digit hex `START..END` plus LF, including singletons, and
+requires the authoritative semantic digest
+`5d2e0f0aaa2d84955d13925234b7f806a613e25f0ab0fc9666b32b9120a6a42c`.
+When the ignored local research corpus is available, the test also checks exact
+equality with the DICP records parsed from the full pinned, size- and
+hash-verified UCD file. This parser and the test-only membership oracle are not
+application code.
+
+Because the CLI intentionally still reports that no scanners ran, this phase
+uses passing fixture-validation tests instead of checking in a permanently
+failing scanner integration test. The production phase will consume the same
+support data for executable scanner comparisons, including unchanged-input and
+neutral-reporting assertions.
 
 ## Acceptance criteria
 
@@ -87,11 +119,12 @@ read-only.
 1. Source contract: audit governing specs and ADRs, pin the Unicode data and
    license provenance in `research/sources.yaml`, and approve
    `docs/specs/unicode-default-ignorable.md`.
-2. Fixtures: before production code, add minimal valid UTF-8 fixtures for
-   absence, singleton/range boundaries, multibyte and supplementary-plane
-   offsets, repeated occurrences, and 256/257-location bounds. Add malformed
-   leading, continuation, overlong, surrogate, out-of-range, and truncated UTF-8
-   cases with explicit expected statuses and evidence.
+2. Fixtures (completed 2026-08-11): before production code, add minimal valid
+   UTF-8 fixtures for absence, singleton/range boundaries, multibyte and
+   supplementary-plane offsets, repeated occurrences, and 256/257-location
+   bounds. Add malformed leading, continuation, overlong, surrogate,
+   out-of-range, and truncated UTF-8 cases with explicit expected statuses and
+   evidence.
 3. Minimal implementation: add direct Unicode 17.0.0 DICP membership and one
    scanner path in the existing crates, then connect it to single-file
    inspection without adding a generic scanner architecture or a new crate.
@@ -108,7 +141,8 @@ read-only.
 - Recompute SHA-256 and byte size for both local Unicode files.
 - Parse the pinned data independently and verify 27 explicit DICP ranges and
   4,174 code points.
-- `cargo test --offline -p scrub --test unicode_default_ignorable`
+- `cargo test -p scrub --test unicode_default_ignorable_fixtures`
+- `cargo test --offline -p scrub --test unicode_default_ignorable` (production phase)
 - `cargo test --offline --workspace`
 - `just check`
 - `git diff --check`
@@ -129,6 +163,17 @@ read-only.
 
 ## Outcome
 
-The source ledger and public scanner contract are prepared. Fixtures,
-implementation, tests, and the DICP conformance claim remain pending and must
-proceed in the order above.
+The fixture phase added 24 reusable cases covering valid absence and presence,
+offset accounting, repeated and bounded evidence, malformed/incomplete UTF-8,
+an invalid suffix after a valid DICP prefix, and a DICP scalar split across the
+existing 64 KiB read boundary. Expected locations are typed byte/scalar pairs;
+invalid bytes are byte vectors rather than Unicode strings. Five passing tests
+validate the fixture corpus and the 27-range/4,174-code-point membership data,
+including an unconditional digest of the compact range set and parity with the
+full pinned UCD when it is available in the local research corpus.
+
+No production scanner, production membership table/parser, CLI behavior, input
+transformation, or conformance claim was added. Implementation, scanner-facing
+adversarial/property tests, unchanged-input verification, neutral human/JSON
+output verification, and the final `CONFORMANCE.md` update remain pending in
+steps 3 through 5.
