@@ -1,0 +1,31 @@
+# Rust
+/target/
+
+# Python
+**/__pycache__/
+**/.pytest_cache/
+**/.ruff_cache/
+**/.mypy_cache/
+**/.venv/
+
+# Local coding-agent setup/prompts. Keep private; not part of project identity.
+/.codex/
+
+# Local research corpus (do not redistribute papers/datasets by accident)
+/research/library/*
+!/research/library/.gitkeep
+
+# Local experiment caches / large generated artifacts
+/waterlarp/.cache/
+/waterlarp/results/local/
+
+# Secrets / local env
+.env
+.env.*
+!.env.example
+
+# OS/editor
+.DS_Store
+Thumbs.db
+.idea/
+.vscode/
