@@ -7,3 +7,4 @@ license.workspace = true
 
 [dependencies]
 scrub-report = { path = "../scrub-report" }
+sha2 = "0.11.0"
