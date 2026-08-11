@@ -1,0 +1,454 @@
+schema_version: 2
+last_verified: 2026-08-11
+sources:
+- id: anthropic-claude-marking
+  title: How Claude marks AI-generated content
+  organization: Anthropic
+  kind: vendor-doc
+  url: https://support.claude.com/en/articles/16266773-how-claude-marks-ai-generated-content
+  authority: primary
+  integration: documentation
+  used_for:
+  - claude-scope
+  - claude-limitations
+  license: documentation-terms
+- id: c2pa-spec-2.4
+  title: C2PA Technical Specification 2.4
+  organization: Coalition for Content Provenance and Authenticity
+  kind: standard
+  url: https://spec.c2pa.org/specifications/specifications/2.4/specs/C2PA_Specification.html
+  authority: primary
+  integration: specification
+  used_for:
+  - c2pa-semantics
+  license: verify-current-spec-terms
+- id: c2pa-rs
+  title: c2pa-rs
+  organization: Content Authenticity Initiative
+  kind: reference-implementation
+  url: https://github.com/contentauth/c2pa-rs
+  authority: reference
+  integration: dependency-or-adapter
+  used_for:
+  - c2pa-parsing
+  - c2pa-validation
+  license: MIT OR Apache-2.0
+  revision: pin-when-integrated
+- id: unicode-uax44-17.0.0
+  title: "Unicode Standard Annex #44: Unicode Character Database"
+  organization: Unicode Consortium
+  kind: standard
+  url: https://www.unicode.org/reports/tr44/
+  authority: primary
+  integration: specification
+  used_for:
+  - unicode-property-semantics
+  - unicode-default-ignorable-semantics
+  license: Unicode copyright and terms of use
+  revision: Unicode 17.0.0
+- id: unicode-derived-core-properties-17.0.0
+  title: DerivedCoreProperties.txt
+  organization: Unicode Consortium
+  kind: normative-data
+  url: https://www.unicode.org/Public/17.0.0/ucd/DerivedCoreProperties.txt
+  authority: primary
+  integration: pinned-local-data
+  used_for:
+  - unicode-default-ignorable-membership
+  license: "Unicode License V3; local source research/library/unicode/17.0.0/UNICODE-LICENSE.txt; SHA-256 e7a93b009565cfce55919a381437ac4db883e9da2126fa28b91d12732bc53d96"
+  revision: "Unicode 17.0.0; local source research/library/unicode/17.0.0/DerivedCoreProperties.txt; 1,134,783 bytes; SHA-256 24c7fed1195c482faaefd5c1e7eb821c5ee1fb6de07ecdbaa64b56a99da22c08; Default_Ignorable_Code_Point: 27 explicit ranges, 4,174 code points"
+- id: unicode-uts55
+  title: "Unicode Source Code Handling (UTS #55)"
+  organization: Unicode Consortium
+  kind: standard
+  url: https://www.unicode.org/reports/tr55/
+  authority: primary
+  integration: interpretation-guidance
+  used_for:
+  - unicode-source-code-security-guidance
+  license: Unicode copyright and terms of use
+  revision: not pinned; guidance only, not property membership
+- id: unicode-uts39
+  title: "Unicode Security Mechanisms (UTS #39)"
+  organization: Unicode Consortium
+  kind: standard
+  url: https://www.unicode.org/reports/tr39/
+  authority: primary
+  integration: specification
+  used_for:
+  - unicode-confusables
+  - unicode-security
+  license: verify-spec-and-data-terms
+  revision: pin-unicode-version-when-implemented
+- id: kgw
+  title: A Watermark for Large Language Models
+  authors:
+  - John Kirchenbauer
+  - Jonas Geiping
+  - Yuxin Wen
+  - Jonathan Katz
+  - Ian Miers
+  - Tom Goldstein
+  year: 2023
+  kind: paper+reference
+  url: https://proceedings.mlr.press/v202/kirchenbauer23a.html
+  code: https://github.com/jwkirchenbauer/lm-watermarking
+  authority: primary
+  integration: adapter-or-reimplementation
+  used_for:
+  - waterlarp-baseline
+  license: Apache-2.0
+  revision: pin-when-integrated
+- id: unigram-watermark
+  title: Provable Robust Watermarking for AI-Generated Text
+  authors:
+  - Xuandong Zhao
+  - Prabhanjan Vijendra Ananth
+  - Lei Li
+  - Yu-Xiang Wang
+  kind: paper+reference
+  url: https://openreview.net/forum?id=SsmT8aO45L
+  code: https://github.com/XuandongZhao/Unigram-Watermark
+  authority: primary
+  integration: adapter-or-reimplementation
+  used_for:
+  - waterlarp-baseline
+  license: MIT
+  revision: pin-when-integrated
+- id: synthid-text
+  title: Scalable watermarking for identifying large language model outputs
+  authors:
+  - Sumanth Dathathri
+  - Abigail See
+  - Sumedh Ghaisas
+  - Po-Sen Huang
+  - Rob McAdam
+  - et al.
+  year: 2024
+  kind: paper+reference
+  url: https://www.nature.com/articles/s41586-024-08025-4
+  code: https://github.com/google-deepmind/synthid-text
+  authority: primary
+  integration: adapter
+  used_for:
+  - waterlarp-baseline
+  - calibration-methodology
+  license: Apache-2.0-software; verify non-code materials separately
+  revision: pin-when-integrated
+- id: markllm
+  title: MarkLLM
+  organization: THU-BPM and collaborators
+  kind: research-toolkit
+  url: https://github.com/THU-BPM/MarkLLM
+  authority: reference
+  integration: reference-and-selective-adapter
+  used_for:
+  - taxonomy
+  - baseline-validation
+  license: Apache-2.0
+  revision: pin-when-integrated
+- id: textseal
+  title: TextSeal
+  organization: Meta FAIR and collaborators
+  kind: paper+research-toolkit
+  url: https://arxiv.org/abs/2605.12456
+  code: https://github.com/facebookresearch/textseal
+  authority: primary
+  integration: reference
+  used_for:
+  - watermark-frontier
+  - research-architecture
+  - radioactivity-future
+  license: Apache-2.0; preserve NOTICE if code is reused
+  revision: pin-when-integrated
+- id: sweet
+  title: Who Wrote this Code? Watermarking for Code Generation
+  authors:
+  - Taehyun Lee
+  - Seokhee Hong
+  - Jaewoo Ahn
+  - Ilgee Hong
+  - Hwaran Lee
+  - Sangdoo Yun
+  - Jamin Shin
+  - Gunhee Kim
+  year: 2024
+  kind: paper+reference
+  url: https://aclanthology.org/2024.acl-long.268/
+  code: https://github.com/hongcheki/sweet-watermark
+  authority: primary
+  integration: reproduction-or-reference
+  used_for:
+  - code-watermark-research
+  license: verify-repo-license-before-code-reuse
+  revision: pin-when-integrated
+- id: code-watermark-robustness
+  title: LLM code watermark robustness reference project
+  authors:
+  - Tarun Suresh
+  - Shubham Ugare
+  - Gagandeep Singh
+  - Sasa Misailovic
+  kind: research-code
+  url: https://github.com/uiuc-arc/llm-code-watermark
+  authority: reference
+  integration: reference
+  used_for:
+  - code-transformations
+  - executable-evaluation
+  license: verify-before-code-reuse
+- id: watermarks-in-sand
+  title: 'Watermarks in the Sand: Impossibility of Strong Watermarking for Generative Models'
+  authors:
+  - Hanlin Zhang
+  - Benjamin L. Edelman
+  - Danilo Francati
+  - Daniele Venturi
+  - Giuseppe Ateniese
+  - Boaz Barak
+  year: 2024
+  kind: paper
+  url: https://proceedings.mlr.press/v235/zhang24o.html
+  authority: primary
+  integration: citation
+  used_for:
+  - threat-model
+  - limitations
+  license: paper-terms
+- id: watermark-stealing
+  title: Watermark Stealing in Large Language Models
+  authors:
+  - Nikola Jovanović
+  - Robin Staab
+  - Martin Vechev
+  year: 2024
+  kind: paper+reference
+  url: https://arxiv.org/abs/2402.19361
+  code: https://github.com/eth-sri/watermark-stealing
+  authority: primary
+  integration: threat-model-and-future-reproduction
+  used_for:
+  - scrubbing
+  - spoofing
+  - stealing
+  license: MIT
+- id: black-box-watermark-detection
+  title: Black-Box Detection of Language Model Watermarks
+  authors:
+  - Thibaud Gloaguen
+  - Nikola Jovanović
+  - Robin Staab
+  - Martin Vechev
+  year: 2024
+  kind: paper
+  url: https://arxiv.org/abs/2405.20777
+  authority: primary
+  integration: threat-model
+  used_for:
+  - existence-testing
+  - deployed-watermark-methodology
+  license: paper-terms
+- id: watermark-survey-2026
+  title: 'A Survey on LLM Watermarking: Theory and Deployment'
+  authors:
+  - Huy Phan
+  - Kieu Dang
+  - Ojaswi Dulal
+  - Aiham Al Shukairi
+  - Abby Shine
+  - Chase Garner
+  - Phung Lai
+  year: 2026
+  kind: survey
+  url: https://arxiv.org/abs/2607.10103
+  authority: secondary
+  integration: taxonomy
+  used_for:
+  - taxonomy
+  - deployment-metrics
+  - open-problems
+  license: paper-terms
+- id: cohere-magikarp
+  title: Fishing for Magikarp / cohere-ai/magikarp
+  authors:
+  - Sander Land
+  - Max Bartolo
+  kind: research-repo-inspiration
+  url: https://github.com/cohere-ai/magikarp
+  authority: reference
+  integration: inspiration
+  used_for:
+  - paper-code-results-reproducibility
+  license: Apache-2.0
+- id: tobi-qmd
+  title: qmd
+  author: Tobi Lütke
+  kind: engineering-inspiration
+  url: https://github.com/tobi/qmd
+  authority: reference
+  integration: local-development-tool-and-inspiration
+  used_for:
+  - cli-ergonomics
+  - doctor
+  - benchmark-interface
+  - local-research-retrieval
+  license: verify-current-license-before-code-reuse
+- id: karpathy-build-nanogpt
+  title: build-nanogpt
+  author: Andrej Karpathy
+  kind: engineering-inspiration
+  url: https://github.com/karpathy/build-nanogpt
+  authority: reference
+  integration: inspiration
+  used_for:
+  - narrative-history
+  - legibility
+  license: verify-before-code-reuse
+- id: ghostty
+  title: Ghostty
+  author: Mitchell Hashimoto and contributors
+  kind: engineering-inspiration
+  url: https://github.com/ghostty-org/ghostty
+  authority: reference
+  integration: inspiration
+  used_for:
+  - conformance
+  - source-authority
+  license: MIT
+- id: nvidia-ruler
+  title: RULER
+  organization: NVIDIA
+  kind: benchmark-inspiration
+  url: https://github.com/NVIDIA/RULER
+  authority: reference
+  integration: inspiration
+  used_for:
+  - robustness-envelope
+  - effective-vs-claimed
+  license: verify-before-code-reuse
+- id: nvidia-tensorrt-benchmarking
+  title: TensorRT-LLM benchmarking documentation
+  organization: NVIDIA
+  kind: benchmark-methodology
+  url: https://nvidia.github.io/TensorRT-LLM/performance/benchmarking-default-performance.html
+  authority: primary
+  integration: inspiration
+  used_for:
+  - environment-reporting
+  - performance-reproduction
+  license: documentation-terms
+- id: hf-lighteval
+  title: Lighteval
+  organization: Hugging Face
+  kind: eval-inspiration
+  url: https://github.com/huggingface/lighteval
+  authority: reference
+  integration: inspiration
+  used_for:
+  - sample-level-results
+  license: MIT
+- id: llama-cpp
+  title: llama.cpp
+  organization: ggml-org
+  kind: engineering-inspiration
+  url: https://github.com/ggml-org/llama.cpp
+  authority: reference
+  integration: inspiration
+  used_for:
+  - first-run-ux
+  - benchmark-output
+  license: MIT
+- id: github-artifact-attestations
+  title: GitHub artifact attestations
+  organization: GitHub
+  kind: release-provenance
+  url: https://docs.github.com/en/actions/how-tos/secure-your-work/use-artifact-attestations/use-artifact-attestations
+  authority: primary
+  integration: release-process
+  used_for:
+  - build-provenance
+  license: documentation-terms
+- id: github-commit-signing
+  title: GitHub commit signature verification
+  organization: GitHub
+  kind: release-provenance
+  url: https://docs.github.com/en/authentication/managing-commit-signature-verification/about-commit-signature-verification
+  authority: primary
+  integration: maintainer-process
+  used_for:
+  - signed-history
+  license: documentation-terms
+- id: anthropic-agent-evals-2026
+  title: Demystifying evals for AI agents
+  organization: Anthropic
+  year: 2026
+  kind: evaluation-methodology
+  url: https://www.anthropic.com/engineering/demystifying-evals-for-ai-agents
+  authority: primary
+  integration: inspiration
+  used_for:
+  - task-trial-grader-trace-outcome-vocabulary
+  - multi-grader-evaluation
+  license: documentation-terms
+- id: anthropic-long-running-harness
+  title: Effective harnesses for long-running agents
+  organization: Anthropic
+  year: 2025
+  kind: engineering-inspiration
+  url: https://www.anthropic.com/engineering/effective-harnesses-for-long-running-agents
+  authority: primary
+  integration: inspiration
+  used_for:
+  - incremental-progress
+  - durable-session-state
+  license: documentation-terms
+- id: shopify-sidekick-loop-2026
+  title: Sidekick's continual learning loop
+  organization: Shopify
+  author: Cody Mazza-Anthony
+  year: 2026
+  kind: evaluation-methodology
+  url: https://shopify.engineering/sidekicks-continual-learning-loop
+  authority: primary
+  integration: inspiration
+  used_for:
+  - human-agreement
+  - judge-calibration
+  - targeted-degradation-tests
+  - propose-evaluate-loop
+  license: documentation-terms
+- id: karpathy-autoresearch
+  title: autoresearch
+  author: Andrej Karpathy
+  year: 2026
+  kind: research-automation-inspiration
+  url: https://github.com/karpathy/autoresearch
+  authority: reference
+  integration: future-inspiration
+  used_for:
+  - propose-evaluate-keep-discard-loop
+  license: verify-before-code-reuse
+- id: cargo-deny
+  title: cargo-deny
+  organization: Embark Studios
+  kind: dependency-policy-tool
+  url: https://github.com/EmbarkStudios/cargo-deny
+  authority: reference
+  integration: future-tooling
+  used_for:
+  - license-policy
+  - advisories
+  - dependency-sources
+  - banned-dependencies
+  license: MIT OR Apache-2.0
+- id: cargo-dist
+  title: cargo-dist
+  organization: axo
+  kind: release-tooling
+  url: https://github.com/axodotdev/cargo-dist
+  authority: reference
+  integration: future-tooling
+  used_for:
+  - cross-platform-release-orchestration
+  - artifact-attestations
+  license: verify-current-license-before-integration
