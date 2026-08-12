@@ -2,6 +2,8 @@ use std::fmt::Write as _;
 
 use scrub_report::{Evidence, Finding, FindingStatus, MechanismIdentity};
 
+use crate::utf8_stream::{Decoder, PushError, ScalarObservation};
+
 pub(crate) const MECHANISM_ID: &str = "unicode.default_ignorable_code_point";
 pub(crate) const UNICODE_VERSION: &str = "17.0.0";
 
@@ -47,97 +49,43 @@ struct Location {
 }
 
 pub(crate) struct Inspection {
-    incomplete: [u8; 4],
-    incomplete_len: usize,
-    incomplete_byte_offset: u64,
-    scalar_offset: u64,
+    decoder: Decoder,
     total_occurrence_count: u64,
     locations: Vec<Location>,
-    invalid_utf8: bool,
 }
 
 impl Inspection {
     pub(crate) fn new() -> Self {
         Self {
-            incomplete: [0; 4],
-            incomplete_len: 0,
-            incomplete_byte_offset: 0,
-            scalar_offset: 0,
+            decoder: Decoder::new(),
             total_occurrence_count: 0,
             locations: Vec::with_capacity(RETAINED_LOCATION_LIMIT),
-            invalid_utf8: false,
         }
     }
 
-    pub(crate) fn inspect_chunk(
-        &mut self,
-        bytes: &[u8],
-        chunk_byte_offset: u64,
-    ) -> Result<(), ScanError> {
-        if self.invalid_utf8 {
-            return Ok(());
-        }
-
-        let mut consumed = 0;
-        while self.incomplete_len != 0 && consumed < bytes.len() {
-            self.incomplete[self.incomplete_len] = bytes[consumed];
-            self.incomplete_len += 1;
-            consumed += 1;
-
-            let candidate = self.incomplete;
-            match std::str::from_utf8(&candidate[..self.incomplete_len]) {
-                Ok(text) => {
-                    self.inspect_valid_text(text, self.incomplete_byte_offset)?;
-                    self.incomplete_len = 0;
-                }
-                Err(error) if error.error_len().is_none() && self.incomplete_len < 4 => {}
-                Err(_) => {
-                    self.invalid_utf8 = true;
-                    return Ok(());
-                }
-            }
-        }
-
-        if self.incomplete_len != 0 {
-            return Ok(());
-        }
-
-        let remaining = &bytes[consumed..];
-        let remaining_byte_offset = chunk_byte_offset
-            .checked_add(u64::try_from(consumed).map_err(|_| ScanError::OffsetOverflow)?)
-            .ok_or(ScanError::OffsetOverflow)?;
-        match std::str::from_utf8(remaining) {
-            Ok(text) => self.inspect_valid_text(text, remaining_byte_offset),
-            Err(error) if error.error_len().is_some() => {
-                self.invalid_utf8 = true;
-                Ok(())
-            }
-            Err(error) => {
-                let valid_up_to = error.valid_up_to();
-                let (valid, incomplete) = remaining.split_at(valid_up_to);
-                let text = std::str::from_utf8(valid).map_err(|_| ScanError::OffsetOverflow)?;
-                self.inspect_valid_text(text, remaining_byte_offset)?;
-
-                if incomplete.len() > 3 {
-                    self.invalid_utf8 = true;
-                    return Ok(());
-                }
-                self.incomplete[..incomplete.len()].copy_from_slice(incomplete);
-                self.incomplete_len = incomplete.len();
-                self.incomplete_byte_offset = remaining_byte_offset
-                    .checked_add(u64::try_from(valid_up_to).map_err(|_| ScanError::OffsetOverflow)?)
-                    .ok_or(ScanError::OffsetOverflow)?;
-                Ok(())
-            }
-        }
+    pub(crate) fn inspect_chunk(&mut self, bytes: &[u8]) -> Result<(), ScanError> {
+        let Self {
+            decoder,
+            total_occurrence_count,
+            locations,
+        } = self;
+        decoder
+            .push(bytes, |observation| {
+                inspect_scalar(observation, total_occurrence_count, locations)
+            })
+            .map_err(|error| match error {
+                PushError::OffsetOverflow => ScanError::OffsetOverflow,
+                PushError::Observer(error) => error,
+            })
     }
 
-    pub(crate) fn finish(mut self) -> Finding {
-        if self.incomplete_len != 0 {
-            self.invalid_utf8 = true;
-        }
-
-        if self.invalid_utf8 {
+    pub(crate) fn finish(self) -> Finding {
+        let Self {
+            decoder,
+            total_occurrence_count,
+            locations,
+        } = self;
+        if decoder.finish().is_err() {
             return Finding::new(
                 MechanismIdentity::new(MECHANISM_ID, UNICODE_VERSION),
                 FindingStatus::Invalid,
@@ -150,61 +98,51 @@ impl Inspection {
             );
         }
 
-        let status = if self.total_occurrence_count == 0 {
+        let status = if total_occurrence_count == 0 {
             FindingStatus::Absent
         } else {
             FindingStatus::Present
         };
-        let locations_truncated = self.total_occurrence_count
+        let locations_truncated = total_occurrence_count
             > u64::try_from(RETAINED_LOCATION_LIMIT).expect("the location limit fits in u64");
         Finding::new(
             MechanismIdentity::new(MECHANISM_ID, UNICODE_VERSION),
             status,
             vec![
-                Evidence::new("locations", locations_json(&self.locations)),
+                Evidence::new("locations", locations_json(&locations)),
                 Evidence::new("locations_truncated", locations_truncated.to_string()),
-                Evidence::new(
-                    "total_occurrence_count",
-                    self.total_occurrence_count.to_string(),
-                ),
+                Evidence::new("total_occurrence_count", total_occurrence_count.to_string()),
             ],
             vec![VALID_INTERPRETATION_LIMITATION.to_owned()],
             vec![],
         )
-    }
-
-    fn inspect_valid_text(&mut self, text: &str, byte_offset: u64) -> Result<(), ScanError> {
-        for (relative_byte_offset, value) in text.char_indices() {
-            let code_point = u32::from(value);
-            if is_default_ignorable(code_point) {
-                self.total_occurrence_count = self
-                    .total_occurrence_count
-                    .checked_add(1)
-                    .ok_or(ScanError::OffsetOverflow)?;
-                if self.locations.len() < RETAINED_LOCATION_LIMIT {
-                    let relative_byte_offset = u64::try_from(relative_byte_offset)
-                        .map_err(|_| ScanError::OffsetOverflow)?;
-                    self.locations.push(Location {
-                        code_point,
-                        byte_offset: byte_offset
-                            .checked_add(relative_byte_offset)
-                            .ok_or(ScanError::OffsetOverflow)?,
-                        scalar_offset: self.scalar_offset,
-                    });
-                }
-            }
-            self.scalar_offset = self
-                .scalar_offset
-                .checked_add(1)
-                .ok_or(ScanError::OffsetOverflow)?;
-        }
-        Ok(())
     }
 }
 
 #[derive(Debug, Clone, Copy, Eq, PartialEq)]
 pub(crate) enum ScanError {
     OffsetOverflow,
+}
+
+fn inspect_scalar(
+    observation: ScalarObservation,
+    total_occurrence_count: &mut u64,
+    locations: &mut Vec<Location>,
+) -> Result<(), ScanError> {
+    let code_point = u32::from(observation.value);
+    if is_default_ignorable(code_point) {
+        *total_occurrence_count = total_occurrence_count
+            .checked_add(1)
+            .ok_or(ScanError::OffsetOverflow)?;
+        if locations.len() < RETAINED_LOCATION_LIMIT {
+            locations.push(Location {
+                code_point,
+                byte_offset: observation.byte_offset,
+                scalar_offset: observation.scalar_offset,
+            });
+        }
+    }
+    Ok(())
 }
 
 fn is_default_ignorable(code_point: u32) -> bool {

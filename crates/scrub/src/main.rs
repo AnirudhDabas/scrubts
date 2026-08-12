@@ -11,6 +11,7 @@ use scrub_report::{ArtifactIdentity, Report, Sha256Digest, ToolIdentity};
 use sha2::{Digest, Sha256};
 
 mod unicode_default_ignorable;
+mod utf8_stream;
 
 const USAGE: &str = "Usage: scrub inspect <path> [--json]";
 const UNEVALUATED_MECHANISMS_LIMITATION: &str = "Inspection is limited to Unicode 17.0.0 Default_Ignorable_Code_Point; bidi-control, normalization, confusable, sanitization, metadata, C2PA, statistical and Claude-specific watermark, and WaterLARP mechanisms are not evaluated.";
@@ -158,7 +159,7 @@ fn inspect_file(path: &Path) -> Result<Report, InspectError> {
         }
         hasher.update(&buffer[..count]);
         unicode_inspection
-            .inspect_chunk(&buffer[..count], byte_length)
+            .inspect_chunk(&buffer[..count])
             .map_err(|_| InspectError::ArtifactTooLarge)?;
         let count = u64::try_from(count).map_err(|_| InspectError::ArtifactTooLarge)?;
         byte_length = byte_length

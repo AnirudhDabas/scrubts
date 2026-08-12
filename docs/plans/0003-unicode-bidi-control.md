@@ -271,3 +271,137 @@ production or report source, Cargo files, `CONFORMANCE.md`, or unrelated seed
 documents. The Git index remained empty. No source contradiction or scientific
 question blocks Milestone 3C; its streaming-decoder architecture decision
 remains intentionally open.
+
+# Milestone 3C-1: Shared incremental UTF-8 scalar decoding
+
+## Goal
+
+Extract the production DICP scanner's incremental UTF-8 validation, bounded
+carry, and original byte/scalar offset tracking into one small internal
+component. Preserve all existing DICP findings, evidence, CLI output, artifact
+identity, and single-pass inspection behavior.
+
+## Non-goals
+
+- Production `unicode.bidi_control` membership, findings, CLI wording, or
+  conformance claims.
+- A scanner trait, registry, plugin, generic Unicode framework, or other
+  future-mechanism architecture.
+- Whole-file buffering, a second artifact read, dependencies, unsafe code, or
+  changes to report schema, hashing, byte counting, or the 65,536-byte buffer.
+
+## Sources / authority
+
+- `std::str::from_utf8` and `Utf8Error::{valid_up_to,error_len}` define the
+  implementation semantics for valid prefixes, incomplete suffixes, and
+  definite malformed input.
+- `docs/specs/unicode-default-ignorable.md` governs preserved DICP status and
+  offset semantics.
+- `docs/specs/unicode-bidi-control.md` and the frozen Milestone 3B fixtures
+  establish that a second deterministic Unicode consumer is approved, while
+  remaining outside production scope here.
+- `docs/specs/report-schema.md`, `docs/SOURCE_AUTHORITY.md`, and
+  `CONFORMANCE.md` constrain evidence and support claims.
+
+## Current state
+
+`unicode_default_ignorable::Inspection` owns UTF-8 carry/validation and scalar
+offset accounting together with DICP membership, counting, location retention,
+and finding construction. The existing inspection loop reads one 65,536-byte
+buffer, then hashes, scans, and counts the same returned byte slice.
+
+## Design
+
+Add one private module containing an incremental decoder state and a scalar
+observation value. Each pushed byte slice is validated with safe
+`std::str::from_utf8`; verified scalar values are delivered in input order with
+zero-based original byte and Unicode scalar-value offsets. Retain only an
+incomplete UTF-8 suffix, bounded to three bytes. Definite malformed input makes
+the decoder terminal; an incomplete suffix becomes invalid only at finish.
+
+DICP owns the decoder and observes its scalar events. DICP remains solely
+responsible for property membership, occurrence counts, first-256 retention,
+evidence serialization, and final finding semantics. Invalid final decoding
+continues to discard all valid-prefix property evidence. The outer inspection
+loop continues hashing and counting every byte after decoder invalidity.
+
+## Acceptance criteria
+
+- Every existing DICP and CLI test retains its current semantics.
+- Whole, short, one-byte, multibyte-splitting, and 65,536-boundary partitions
+  produce identical ordered scalar observations.
+- Two-, three-, and four-byte scalars work across every legal split and pending
+  carry never exceeds three bytes.
+- Lone continuation, overlong, and surrogate encodings are definite errors;
+  incomplete EOF is invalid only on finish.
+- Byte and scalar offsets remain exact for ASCII, BMP, and supplementary-plane
+  scalar values.
+- The existing read buffer, single pass, hashing, byte counting, report schema,
+  CLI output, dependencies, and Bidi production status do not change.
+
+## Implementation steps
+
+1. Add the focused internal decoder and its scalar observation contract.
+2. Adapt DICP inspection to consume observations and remove its decoder fields.
+3. Add compact decoder unit tests for partition invariance, carry/error
+   semantics, offset divergence, short chunks, and repeated determinism.
+4. Run focused DICP/CLI checks, full repository gates, and inspect the complete
+   diff and Git state.
+
+## Validation
+
+- `cargo test -p scrub --bin scrub utf8_stream`
+- `cargo test -p scrub --test unicode_default_ignorable`
+- `cargo test -p scrub --test unicode_default_ignorable_fixtures`
+- `cargo test -p scrub --test cli`
+- `cargo fmt --check`
+- `cargo clippy --workspace --all-targets -- -D warnings`
+- `cargo test --workspace`
+- `git diff --check`
+- `just check`
+- `git diff --stat`
+- `git diff`
+- `git status --short`
+- `git diff --cached --name-only`
+
+## Risks / open questions
+
+- The decoder must not confuse `error_len() == None` with malformed input; only
+  the former may be carried, and only until final EOF.
+- The callback API must remain a scalar-delivery boundary rather than grow into
+  a scanner framework.
+- Milestone 3C's later Bidi production work must still decide how both property
+  observers are wired to one decoder without changing independent finding
+  semantics.
+
+## Outcome
+
+Milestone 3C-1 added one private `utf8_stream` module. Its `Decoder::push`
+accepts each actual inspection byte slice and a fallible scalar observer, and
+emits each verified `char` with its zero-based original byte and scalar-value
+offset. The decoder owns safe `std::str::from_utf8` validation, a maximum
+three-byte incomplete suffix, scalar/byte offset state, terminal malformed
+input state, and incomplete-EOF invalidation in `finish`.
+
+The DICP inspection state now owns this decoder and only performs DICP
+membership, occurrence counting, first-256 location retention, evidence
+serialization, and finding construction. Its final `INVALID` path remains the
+sole output after malformed or incomplete UTF-8 and retains no valid-prefix
+property evidence. The outer 65,536-byte read loop still hashes, scans, and
+counts the same returned bytes in one pass and continues through the complete
+artifact after decoder invalidity.
+
+Six decoder unit tests cover whole and 1/2/3/7-byte chunks, deliberate
+multibyte splits, a split at byte 65,536, every legal split of two-/three-/
+four-byte scalars, the three required definite malformed forms, malformed input
+becoming definite across chunks, incomplete EOF, ASCII/BMP/supplementary offset
+divergence, bounded carry, and repeated deterministic execution.
+
+The focused decoder target, both DICP targets, and compiled CLI target passed.
+`cargo fmt --check`, Clippy with workspace/all-target warnings denied, all 47
+workspace tests, `git diff --check`, and `just check` also passed. Existing hard
+DICP fixtures retained exact status/evidence semantics for the 65,536-byte
+valid and malformed boundaries, prefix-evidence discard, complete artifact
+SHA-256/length after invalidity, and 256/257 occurrence retention. No subsequent
+Bidi production blocker was found; later wiring must preserve one decoder pass
+feeding independent property observers.
