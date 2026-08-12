@@ -10,13 +10,15 @@ const PINNED_DICP_DATA: &str = include_str!("../fixtures/unicode-default-ignorab
 
 #[derive(Debug, Clone, Copy, Eq, PartialEq)]
 pub(crate) struct ExpectedLocation {
+    pub(crate) code_point: u32,
     pub(crate) byte_offset: u64,
     pub(crate) scalar_offset: u64,
 }
 
 impl ExpectedLocation {
-    const fn new(byte_offset: u64, scalar_offset: u64) -> Self {
+    const fn new(code_point: u32, byte_offset: u64, scalar_offset: u64) -> Self {
         Self {
+            code_point,
             byte_offset,
             scalar_offset,
         }
@@ -65,8 +67,10 @@ impl ExpectedValidObservation {
             }
             write!(
                 value,
-                "{{\"byte_offset\":{},\"scalar_offset\":{}}}",
-                location.byte_offset, location.scalar_offset
+                "{{\"code_point\":\"{}\",\"byte_offset\":{},\"scalar_offset\":{}}}",
+                canonical_code_point(location.code_point),
+                location.byte_offset,
+                location.scalar_offset
             )
             .expect("writing to a String cannot fail");
         }
@@ -165,52 +169,55 @@ pub(crate) fn fixture_corpus() -> Vec<Fixture> {
         valid_present(
             "zero_width_space_at_beginning",
             "\u{200b}alpha",
-            vec![ExpectedLocation::new(0, 0)],
+            vec![ExpectedLocation::new(0x200B, 0, 0)],
         ),
         valid_present(
             "zero_width_non_joiner_in_middle",
             "a\u{200c}b",
-            vec![ExpectedLocation::new(1, 1)],
+            vec![ExpectedLocation::new(0x200C, 1, 1)],
         ),
         valid_present(
             "zero_width_joiner_at_end",
             "a\u{200d}",
-            vec![ExpectedLocation::new(1, 1)],
+            vec![ExpectedLocation::new(0x200D, 1, 1)],
         ),
         valid_present(
             "zero_width_no_break_space_feff",
             "\u{feff}",
-            vec![ExpectedLocation::new(0, 0)],
+            vec![ExpectedLocation::new(0xFEFF, 0, 0)],
         ),
         valid_present(
             "emoji_heart_with_variation_selector_16",
             "\u{2764}\u{fe0f}",
-            vec![ExpectedLocation::new(3, 1)],
+            vec![ExpectedLocation::new(0xFE0F, 3, 1)],
         ),
         valid_present(
             "supplementary_variation_selector_17",
             "\u{e0100}",
-            vec![ExpectedLocation::new(0, 0)],
+            vec![ExpectedLocation::new(0xE0100, 0, 0)],
         ),
         valid_present(
             "repeated_zero_width_spaces",
             "a\u{200b}\u{200b}b",
-            vec![ExpectedLocation::new(1, 1), ExpectedLocation::new(4, 2)],
+            vec![
+                ExpectedLocation::new(0x200B, 1, 1),
+                ExpectedLocation::new(0x200B, 4, 2),
+            ],
         ),
         valid_present(
             "ascii_before_match",
             "abc\u{200b}",
-            vec![ExpectedLocation::new(3, 3)],
+            vec![ExpectedLocation::new(0x200B, 3, 3)],
         ),
         valid_present(
             "multibyte_scalars_before_match",
             "é界\u{200b}",
-            vec![ExpectedLocation::new(5, 2)],
+            vec![ExpectedLocation::new(0x200B, 5, 2)],
         ),
         valid_present(
             "supplementary_scalar_before_supplementary_match",
             "😀\u{e0100}",
-            vec![ExpectedLocation::new(4, 1)],
+            vec![ExpectedLocation::new(0xE0100, 4, 1)],
         ),
         repeated_occurrences(256),
         repeated_occurrences(257),
@@ -264,7 +271,7 @@ fn repeated_occurrences(count: usize) -> Fixture {
     let locations = (0..retained)
         .map(|index| {
             let index = u64::try_from(index).expect("fixture index fits u64");
-            ExpectedLocation::new(index * 3, index)
+            ExpectedLocation::new(0x200B, index * 3, index)
         })
         .collect();
     Fixture {
@@ -295,6 +302,7 @@ fn boundary_spanning_fixture() -> Fixture {
             FindingStatus::Present,
             1,
             vec![ExpectedLocation::new(
+                0x200B,
                 u64::try_from(byte_offset).expect("boundary offset fits u64"),
                 u64::try_from(byte_offset).expect("boundary offset fits u64"),
             )],
@@ -308,5 +316,13 @@ fn invalid(name: &'static str, input: Vec<u8>) -> Fixture {
         name,
         input,
         expected: ExpectedObservation::InvalidUtf8,
+    }
+}
+
+fn canonical_code_point(code_point: u32) -> String {
+    if code_point <= 0xFFFF {
+        format!("U+{code_point:04X}")
+    } else {
+        format!("U+{code_point:X}")
     }
 }

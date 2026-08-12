@@ -153,7 +153,10 @@ fn report_fixture_evidence_has_one_deterministic_encoding() {
     assert_eq!(
         expected.report_evidence(),
         vec![
-            Evidence::new("locations", r#"[{"byte_offset":5,"scalar_offset":2}]"#,),
+            Evidence::new(
+                "locations",
+                r#"[{"code_point":"U+200B","byte_offset":5,"scalar_offset":2}]"#,
+            ),
             Evidence::new("locations_truncated", "false"),
             Evidence::new("total_occurrence_count", "1"),
         ]
@@ -177,6 +180,7 @@ fn boundary_fixture_splits_a_dicp_scalar_at_the_existing_read_size() {
     assert_eq!(
         expected.locations,
         [ExpectedLocation {
+            code_point: 0x200B,
             byte_offset: 65_535,
             scalar_offset: 65_535,
         }]
@@ -194,6 +198,7 @@ fn oracle_locations(input: &str, ranges: &[CodePointRange]) -> Vec<ExpectedLocat
                 .any(|range| range.contains(u32::from(value)))
             {
                 Some(ExpectedLocation {
+                    code_point: u32::from(value),
                     byte_offset: u64::try_from(byte_offset).expect("fixture offset fits u64"),
                     scalar_offset: u64::try_from(scalar_offset).expect("fixture offset fits u64"),
                 })

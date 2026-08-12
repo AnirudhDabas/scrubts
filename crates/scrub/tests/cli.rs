@@ -3,7 +3,7 @@ use std::path::{Path, PathBuf};
 use std::process::{Command, Output};
 use std::sync::atomic::{AtomicU64, Ordering};
 
-use scrub_report::Report;
+use scrub_report::{Evidence, FindingStatus, Report};
 
 const ABC_SHA256: &str = "ba7816bf8f01cfea414140de5dae2223b00361a396177a9cb410ff61f20015ad";
 const EMPTY_SHA256: &str = "e3b0c44298fc1c149afbf4c8996fb92427ae41e4649b934ca495991b7852b855";
@@ -91,12 +91,53 @@ fn json_stdout_contains_only_the_canonical_report() {
     assert_eq!(report.artifact().path(), artifact.path().to_string_lossy());
     assert_eq!(report.artifact().byte_length(), 3);
     assert_eq!(report.artifact().content_sha256().as_str(), ABC_SHA256);
-    assert!(report.findings().is_empty());
+    assert_eq!(report.findings().len(), 1);
+    let finding = &report.findings()[0];
     assert_eq!(
-        report.limitations(),
-        ["Milestone 1 does not implement artifact scanners."]
+        finding.mechanism().id(),
+        "unicode.default_ignorable_code_point"
     );
+    assert_eq!(finding.mechanism().version(), "17.0.0");
+    assert_eq!(finding.status(), FindingStatus::Absent);
+    assert_eq!(
+        finding.evidence(),
+        [
+            Evidence::new("locations", "[]"),
+            Evidence::new("locations_truncated", "false"),
+            Evidence::new("total_occurrence_count", "0"),
+        ]
+    );
+    assert_eq!(report.limitations().len(), 1);
+    assert!(report.limitations()[0].contains("not evaluated"));
     assert!(report.assumptions().is_empty());
+}
+
+#[test]
+fn json_reports_dicp_presence_without_changing_success_exit_semantics() {
+    let artifact = TempArtifact::new("a\u{200b}b".as_bytes());
+    let output = Command::new(env!("CARGO_BIN_EXE_scrub"))
+        .arg("inspect")
+        .arg(artifact.path())
+        .arg("--json")
+        .output()
+        .expect("scrub process can run");
+
+    assert!(output.status.success(), "stderr: {}", stderr(&output));
+    assert_eq!(stderr(&output), "");
+    let report = Report::from_json(stdout(&output).trim_end()).expect("stdout is a report");
+    let finding = &report.findings()[0];
+    assert_eq!(finding.status(), FindingStatus::Present);
+    assert_eq!(
+        finding.evidence(),
+        [
+            Evidence::new(
+                "locations",
+                r#"[{"code_point":"U+200B","byte_offset":1,"scalar_offset":1}]"#,
+            ),
+            Evidence::new("locations_truncated", "false"),
+            Evidence::new("total_occurrence_count", "1"),
+        ]
+    );
 }
 
 #[test]
@@ -120,8 +161,8 @@ fn file_larger_than_read_buffer_is_fully_hashed() {
 }
 
 #[test]
-fn default_output_is_human_readable_without_an_absence_claim() {
-    let artifact = TempArtifact::new(b"abc");
+fn default_output_is_human_readable_and_neutral() {
+    let artifact = TempArtifact::new("a\u{200b}b".as_bytes());
     let output = Command::new(env!("CARGO_BIN_EXE_scrub"))
         .arg("inspect")
         .arg(artifact.path())
@@ -130,11 +171,26 @@ fn default_output_is_human_readable_without_an_absence_claim() {
 
     assert!(output.status.success(), "stderr: {}", stderr(&output));
     assert_eq!(stderr(&output), "");
-    assert!(stdout(&output).contains("findings: 0 (no scanners run)"));
-    assert!(
-        stdout(&output).contains("limitation: Milestone 1 does not implement artifact scanners.")
-    );
-    assert!(!stdout(&output).to_ascii_lowercase().contains("absent"));
+    assert!(stdout(&output).contains("mechanism: Default_Ignorable_Code_Point (Unicode 17.0.0)"));
+    assert!(stdout(&output).contains("status: present"));
+    assert!(stdout(&output).contains("\"code_point\":\"U+200B\""));
+    assert!(stdout(&output).contains("limitation:"));
+
+    let normalized = stdout(&output).to_ascii_lowercase();
+    for prohibited in [
+        "suspicious",
+        "malicious",
+        "ai-generated",
+        "watermark detected",
+        "watermark removed",
+        "clean",
+        "safe",
+    ] {
+        assert!(
+            !normalized.contains(prohibited),
+            "prohibited wording: {prohibited}"
+        );
+    }
 }
 
 #[test]

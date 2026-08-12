@@ -10,8 +10,10 @@ use std::process::ExitCode;
 use scrub_report::{ArtifactIdentity, Report, Sha256Digest, ToolIdentity};
 use sha2::{Digest, Sha256};
 
+mod unicode_default_ignorable;
+
 const USAGE: &str = "Usage: scrub inspect <path> [--json]";
-const NO_SCANNERS_LIMITATION: &str = "Milestone 1 does not implement artifact scanners.";
+const UNEVALUATED_MECHANISMS_LIMITATION: &str = "Inspection is limited to Unicode 17.0.0 Default_Ignorable_Code_Point; bidi-control, normalization, confusable, sanitization, metadata, C2PA, statistical and Claude-specific watermark, and WaterLARP mechanisms are not evaluated.";
 
 fn main() -> ExitCode {
     let command = match parse_args(env::args_os().skip(1)) {
@@ -141,6 +143,7 @@ fn inspect_file(path: &Path) -> Result<Report, InspectError> {
     }
 
     let mut hasher = Sha256::new();
+    let mut unicode_inspection = unicode_default_ignorable::Inspection::new();
     let mut byte_length = 0_u64;
     let mut buffer = [0_u8; 64 * 1024];
     loop {
@@ -154,6 +157,9 @@ fn inspect_file(path: &Path) -> Result<Report, InspectError> {
             break;
         }
         hasher.update(&buffer[..count]);
+        unicode_inspection
+            .inspect_chunk(&buffer[..count], byte_length)
+            .map_err(|_| InspectError::ArtifactTooLarge)?;
         let count = u64::try_from(count).map_err(|_| InspectError::ArtifactTooLarge)?;
         byte_length = byte_length
             .checked_add(count)
@@ -161,7 +167,7 @@ fn inspect_file(path: &Path) -> Result<Report, InspectError> {
     }
 
     let digest: [u8; 32] = hasher.finalize().into();
-    let mut limitations = vec![NO_SCANNERS_LIMITATION.to_owned()];
+    let mut limitations = vec![UNEVALUATED_MECHANISMS_LIMITATION.to_owned()];
     let display_path = match path.to_str() {
         Some(path) => path.to_owned(),
         None => {
@@ -174,7 +180,7 @@ fn inspect_file(path: &Path) -> Result<Report, InspectError> {
     Ok(Report::new(
         ToolIdentity::new("scrub", env!("CARGO_PKG_VERSION")),
         ArtifactIdentity::new(display_path, byte_length, Sha256Digest::from_bytes(digest)),
-        vec![],
+        vec![unicode_inspection.finish()],
         limitations,
         vec![],
     ))
@@ -222,7 +228,20 @@ fn write_human(writer: &mut impl Write, report: &Report) -> Result<(), OutputErr
     writeln!(writer, "artifact: {}", report.artifact().path())?;
     writeln!(writer, "bytes: {}", report.artifact().byte_length())?;
     writeln!(writer, "sha256: {}", report.artifact().content_sha256())?;
-    writeln!(writer, "findings: 0 (no scanners run)")?;
+    for finding in report.findings() {
+        writeln!(
+            writer,
+            "mechanism: Default_Ignorable_Code_Point (Unicode {})",
+            finding.mechanism().version()
+        )?;
+        writeln!(writer, "status: {}", finding.status())?;
+        for evidence in finding.evidence() {
+            writeln!(writer, "evidence: {}={}", evidence.name(), evidence.value())?;
+        }
+        for limitation in finding.limitations() {
+            writeln!(writer, "finding limitation: {limitation}")?;
+        }
+    }
     for limitation in report.limitations() {
         writeln!(writer, "limitation: {limitation}")?;
     }
