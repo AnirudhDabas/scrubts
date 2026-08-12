@@ -1,4 +1,4 @@
-# Milestone 2A: Unicode Default_Ignorable_Code_Point reporting
+# Milestone 2B: Production Unicode Default_Ignorable_Code_Point reporting
 
 ## Goal
 
@@ -42,11 +42,11 @@ code points. Its local Unicode License V3 text has SHA-256
 
 ## Current state
 
-Milestone 1 provides the schema 0.1 report model and a single-file CLI that
-reports no findings. The Unicode 17.0.0 data and license are present locally,
-and the source ledger and scanner contract are prepared. The fixture phase now
-provides reusable test-only inputs and typed expected observations, but no
-Unicode scanner exists and `CONFORMANCE.md` does not claim DICP support.
+Before Milestone 2B, Milestone 1 provided the schema 0.1 report model and a
+bounded-memory single-file CLI that reported no findings. Milestone 2A provided
+the pinned Unicode 17.0.0 source contract, licensed compact range extract, and
+24 reusable fixture cases, but no production Unicode scanner or conformance
+claim.
 
 ## Design
 
@@ -57,6 +57,14 @@ before membership classification. Scan Unicode scalar values in input order,
 count every matching occurrence, and retain only the first 256 locations with
 their zero-based byte and scalar-value offsets. Report location truncation
 explicitly.
+
+The production path uses one focused module in the `scrub` binary crate. Its
+explicit state receives each existing 65,536-byte read chunk, validates and
+decodes complete UTF-8 prefixes with `std::str::from_utf8`, and retains only an
+incomplete one-to-three-byte suffix for the next read. Artifact hashing and byte
+counting remain in the existing read loop and continue after the Unicode state
+becomes invalid. Finalization changes any incomplete suffix to `INVALID` and
+discards all valid-prefix property observations from report evidence.
 
 The finding mechanism and version identify DICP and Unicode 17.0.0. Human and
 machine wording remains neutral and does not aggregate this observation into a
@@ -72,10 +80,14 @@ ordered byte/scalar location pairs, and truncation; invalid UTF-8 has a separate
 expected variant so it cannot accidentally acquire absence or prefix-only
 presence evidence.
 
-The future report comparison uses three deterministic evidence entries:
+Valid report comparisons use three deterministic evidence entries:
 `total_occurrence_count`, `locations_truncated`, and `locations`. The `locations`
-value is a compact JSON array whose objects contain integer `byte_offset` and
-`scalar_offset` fields in input order.
+value is a compact JSON array whose objects contain canonical `code_point`,
+integer `byte_offset`, and integer `scalar_offset` fields in input order. The
+code-point field was added to the fixture encoding in Milestone 2B because the
+approved public Unicode contract requires every retained occurrence to identify
+the scalar. This uses the existing string-valued `Evidence` type and does not
+change report schema 0.1.
 
 Archive the 27 normative DICP records as a small licensed test extract. A
 test-only parser validates its shape and extent. The compact-membership test
@@ -88,11 +100,9 @@ equality with the DICP records parsed from the full pinned, size- and
 hash-verified UCD file. This parser and the test-only membership oracle are not
 application code.
 
-Because the CLI intentionally still reports that no scanners ran, this phase
-uses passing fixture-validation tests instead of checking in a permanently
-failing scanner integration test. The production phase will consume the same
-support data for executable scanner comparisons, including unchanged-input and
-neutral-reporting assertions.
+Milestone 2B runs the compiled CLI against the same fixture corpus. Invalid UTF-8
+uses only a `utf8_validation` evidence entry and an explanatory limitation; it
+does not expose occurrence count or valid-prefix location evidence.
 
 ## Acceptance criteria
 
@@ -125,14 +135,14 @@ neutral-reporting assertions.
    bounds. Add malformed leading, continuation, overlong, surrogate,
    out-of-range, and truncated UTF-8 cases with explicit expected statuses and
    evidence.
-3. Minimal implementation: add direct Unicode 17.0.0 DICP membership and one
+3. Minimal implementation (completed 2026-08-11): add direct Unicode 17.0.0 DICP membership and one
    scanner path in the existing crates, then connect it to single-file
    inspection without adding a generic scanner architecture or a new crate.
-4. Adversarial/property tests: exhaustively compare scalar membership against
+4. Adversarial/property tests (completed 2026-08-11): exhaustively compare scalar membership against
    the 27 pinned ranges; test all range boundaries, offset accounting,
    determinism, hostile UTF-8, repeated values, evidence bounds, and read-only
    behavior.
-5. Conformance update: after the implementation and tests pass, add the exact
+5. Conformance update (completed 2026-08-11): after the implementation and tests pass, add the exact
    authority, version, fixture status, deviations, and check date to
    `CONFORMANCE.md`.
 
@@ -141,9 +151,13 @@ neutral-reporting assertions.
 - Recompute SHA-256 and byte size for both local Unicode files.
 - Parse the pinned data independently and verify 27 explicit DICP ranges and
   4,174 code points.
+- `cargo test -p scrub --bin scrub unicode_default_ignorable`
 - `cargo test -p scrub --test unicode_default_ignorable_fixtures`
-- `cargo test --offline -p scrub --test unicode_default_ignorable` (production phase)
-- `cargo test --offline --workspace`
+- `cargo test -p scrub --test unicode_default_ignorable`
+- `cargo test -p scrub --test cli`
+- `cargo fmt --check`
+- `cargo clippy --workspace --all-targets -- -D warnings`
+- `cargo test --workspace`
 - `just check`
 - `git diff --check`
 - `git status --short`
@@ -163,17 +177,43 @@ neutral-reporting assertions.
 
 ## Outcome
 
-The fixture phase added 24 reusable cases covering valid absence and presence,
-offset accounting, repeated and bounded evidence, malformed/incomplete UTF-8,
-an invalid suffix after a valid DICP prefix, and a DICP scalar split across the
-existing 64 KiB read boundary. Expected locations are typed byte/scalar pairs;
-invalid bytes are byte vectors rather than Unicode strings. Five passing tests
-validate the fixture corpus and the 27-range/4,174-code-point membership data,
-including an unconditional digest of the compact range set and parity with the
-full pinned UCD when it is available in the local research corpus.
+Milestone 2B added one production module containing the 27 fixed Unicode 17.0.0
+DICP ranges and an explicit incremental inspection state. The existing file loop
+still reads 65,536-byte chunks, hashes and counts every original byte, and never
+loads the complete artifact. The Unicode state uses standard-library UTF-8
+validation, carries at most three incomplete bytes, counts every DICP scalar,
+and retains the first 256 locations. Invalid or incomplete UTF-8 at any point
+finalizes as `INVALID`, with no occurrence count or prefix-only location
+evidence.
 
-No production scanner, production membership table/parser, CLI behavior, input
-transformation, or conformance claim was added. Implementation, scanner-facing
-adversarial/property tests, unchanged-input verification, neutral human/JSON
-output verification, and the final `CONFORMANCE.md` update remain pending in
-steps 3 through 5.
+The compiled CLI is tested against all 24 frozen fixture cases. These cover empty,
+ASCII, benign non-ASCII, combining-mark negatives; U+200B, U+200C, U+200D,
+U+FEFF, U+FE0F, and supplementary-plane positives; beginning, middle, end,
+repeated, multibyte, and supplementary offsets; 256/257 evidence bounds; six
+malformed/incomplete UTF-8 forms; a valid DICP prefix followed by invalid UTF-8;
+and U+200B split at byte 65,535. Separate tests compare the production table to
+the independently parsed compact oracle across every Unicode code point and at
+range boundaries/gaps, verify deterministic output, and verify that real
+inspection leaves bytes and SHA-256 unchanged.
+
+Independent Milestone 2B review required and added one real-CLI regression for
+a malformed UTF-8 sequence whose lead byte is carried from byte 65,535 into the
+next read. The regression also verifies complete-artifact hashing and length,
+continued consumption through a later full read, and removal of earlier valid
+DICP prefix evidence from the `INVALID` finding.
+
+Report schema 0.1 did not change. Valid findings use the existing typed
+`Finding`/`Evidence` model with `locations`, `locations_truncated`, and
+`total_occurrence_count`; location objects now include the code point required
+by the public scanner specification. Invalid findings use `utf8_validation`
+evidence and an explanatory limitation. Human output now identifies the one
+mechanism, its status, bounded evidence, and remaining unevaluated mechanisms.
+No dependency, crate, unsafe code, async path, generic scanner abstraction,
+network behavior, or input transformation was added.
+
+Verification completed on 2026-08-11. The focused production membership tests,
+fixture-contract tests, real-path Unicode tests, and CLI tests passed. The final
+`cargo fmt --check`, `cargo clippy --workspace --all-targets -- -D warnings`,
+`cargo test --workspace`, `just check`, and `git diff --check` gates also passed.
+The full pinned local UCD parity test ran successfully because the ignored
+research source was available; it was read only and is not part of this change.
