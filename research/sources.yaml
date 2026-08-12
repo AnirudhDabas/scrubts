@@ -59,8 +59,9 @@ sources:
   - unicode-default-ignorable-semantics
   - unicode-bidi-control-semantics
   - unicode-normalization-data-semantics
+  - unicode-normalization-default-values
   license: Unicode copyright and terms of use
-  revision: Unicode 17.0.0
+  revision: "Unicode 17.0.0; Revision 36; 2025-08-27; local source research/library/unicode/17.0.0/specs/UAX44-Rev36.html; 313,639 bytes; SHA-256 a97ed3f9dbee8e9a917106a3dc49a0fdeead42e2be06ea6f5cc31117eda3da33"
 - id: unicode-uax15-17.0.0
   title: "Unicode Standard Annex #15: Unicode Normalization Forms"
   organization: Unicode Consortium
@@ -75,8 +76,9 @@ sources:
   - unicode-normalization-quick-check
   - unicode-normalization-boundaries
   - unicode-normalization-buffering
+  - unicode-normalization-npss-distinction
   license: Unicode copyright and terms of use
-  revision: Unicode 17.0.0; Revision 57; 2025-07-30
+  revision: "Unicode 17.0.0; Revision 57; 2025-07-30; local source research/library/unicode/17.0.0/specs/UAX15-Rev57.html; 141,627 bytes; SHA-256 c0c05f91e1c4f9be3d987e27d76cf254b30003b6be41eb94977cc3fe148d4c4e"
 - id: unicode-normalization-test-17.0.0
   title: NormalizationTest.txt
   organization: Unicode Consortium
@@ -87,7 +89,7 @@ sources:
   used_for:
   - unicode-normalization-conformance-oracle
   license: "Unicode License V3; local source research/library/unicode/17.0.0/UNICODE-LICENSE.txt; SHA-256 e7a93b009565cfce55919a381437ac4db883e9da2126fa28b91d12732bc53d96"
-  revision: "Unicode 17.0.0; header NormalizationTest-17.0.0.txt; date 2025-06-30, 06:16:16 GMT; local source research/library/unicode/17.0.0/NormalizationTest.txt; 2,827,429 bytes; SHA-256 5019ffd530751a741900c849c0e010332f142a3612234639bd200b82138a87db"
+  revision: "Unicode 17.0.0; header NormalizationTest-17.0.0.txt; date 2025-06-30, 06:16:16 GMT; local source research/library/unicode/17.0.0/NormalizationTest.txt; 2,827,429 bytes; SHA-256 5019ffd530751a741900c849c0e010332f142a3612234639bd200b82138a87db; byte-identical committed fixture crates/scrub/tests/fixtures/NormalizationTest-17.0.0.txt"
 - id: unicode-derived-age-17.0.0
   title: DerivedAge.txt
   organization: Unicode Consortium
@@ -100,7 +102,7 @@ sources:
   - unicode-normalization-assigned-code-point-identity
   - unicode-assigned-unassigned-distinction
   license: "Unicode License V3; local source research/library/unicode/17.0.0/UNICODE-LICENSE.txt; SHA-256 e7a93b009565cfce55919a381437ac4db883e9da2126fa28b91d12732bc53d96"
-  revision: "Unicode 17.0.0; header DerivedAge-17.0.0.txt; date 2025-07-30, 23:54:38 GMT; local source research/library/unicode/17.0.0/DerivedAge.txt; 138,286 bytes; SHA-256 f8ecdf768bdc210f201abd271d9bc587825618a86a7046a8146cc816393f1998"
+  revision: "Unicode 17.0.0; header DerivedAge-17.0.0.txt; date 2025-07-30, 23:54:38 GMT; local source research/library/unicode/17.0.0/DerivedAge.txt; 138,286 bytes; SHA-256 f8ecdf768bdc210f201abd271d9bc587825618a86a7046a8146cc816393f1998; byte-identical committed fixture crates/scrub/tests/fixtures/DerivedAge-17.0.0.txt"
 - id: unicode-derived-normalization-props-17.0.0
   title: DerivedNormalizationProps.txt
   organization: Unicode Consortium

@@ -1,0 +1,2 @@
+/crates/scrub/tests/fixtures/NormalizationTest-17.0.0.txt -text
+/crates/scrub/tests/fixtures/DerivedAge-17.0.0.txt -text
