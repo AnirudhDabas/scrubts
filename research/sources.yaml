@@ -1,5 +1,5 @@
 schema_version: 2
-last_verified: 2026-08-11
+last_verified: 2026-08-12
 sources:
 - id: anthropic-claude-marking
   title: How Claude marks AI-generated content
@@ -33,6 +33,7 @@ sources:
   integration: specification
   used_for:
   - c2pa-semantics
+  - unicode-normalization-downstream-interoperability
   license: verify-current-spec-terms
 - id: c2pa-rs
   title: c2pa-rs
@@ -57,8 +58,97 @@ sources:
   - unicode-property-semantics
   - unicode-default-ignorable-semantics
   - unicode-bidi-control-semantics
+  - unicode-normalization-data-semantics
   license: Unicode copyright and terms of use
   revision: Unicode 17.0.0
+- id: unicode-uax15-17.0.0
+  title: "Unicode Standard Annex #15: Unicode Normalization Forms"
+  organization: Unicode Consortium
+  kind: standard
+  url: https://www.unicode.org/reports/tr15/tr15-57.html
+  authority: primary
+  integration: specification
+  used_for:
+  - unicode-normalization-semantics
+  - unicode-normalization-conformance
+  - unicode-normalization-stability
+  - unicode-normalization-quick-check
+  - unicode-normalization-boundaries
+  - unicode-normalization-buffering
+  license: Unicode copyright and terms of use
+  revision: Unicode 17.0.0; Revision 57; 2025-07-30
+- id: unicode-normalization-test-17.0.0
+  title: NormalizationTest.txt
+  organization: Unicode Consortium
+  kind: normative-data
+  url: https://www.unicode.org/Public/17.0.0/ucd/NormalizationTest.txt
+  authority: primary
+  integration: pinned-local-conformance-data
+  used_for:
+  - unicode-normalization-conformance-oracle
+  license: "Unicode License V3; local source research/library/unicode/17.0.0/UNICODE-LICENSE.txt; SHA-256 e7a93b009565cfce55919a381437ac4db883e9da2126fa28b91d12732bc53d96"
+  revision: "Unicode 17.0.0; header NormalizationTest-17.0.0.txt; date 2025-06-30, 06:16:16 GMT; local source research/library/unicode/17.0.0/NormalizationTest.txt; 2,827,429 bytes; SHA-256 5019ffd530751a741900c849c0e010332f142a3612234639bd200b82138a87db"
+- id: unicode-derived-age-17.0.0
+  title: DerivedAge.txt
+  organization: Unicode Consortium
+  kind: normative-data
+  url: https://www.unicode.org/Public/17.0.0/ucd/DerivedAge.txt
+  authority: primary
+  integration: pinned-local-data
+  used_for:
+  - unicode-age-data
+  - unicode-normalization-assigned-code-point-identity
+  - unicode-assigned-unassigned-distinction
+  license: "Unicode License V3; local source research/library/unicode/17.0.0/UNICODE-LICENSE.txt; SHA-256 e7a93b009565cfce55919a381437ac4db883e9da2126fa28b91d12732bc53d96"
+  revision: "Unicode 17.0.0; header DerivedAge-17.0.0.txt; date 2025-07-30, 23:54:38 GMT; local source research/library/unicode/17.0.0/DerivedAge.txt; 138,286 bytes; SHA-256 f8ecdf768bdc210f201abd271d9bc587825618a86a7046a8146cc816393f1998"
+- id: unicode-derived-normalization-props-17.0.0
+  title: DerivedNormalizationProps.txt
+  organization: Unicode Consortium
+  kind: normative-data
+  url: https://www.unicode.org/Public/17.0.0/ucd/DerivedNormalizationProps.txt
+  authority: primary
+  integration: pinned-local-data
+  used_for:
+  - unicode-normalization-derived-properties
+  - unicode-normalization-quick-check-data
+  - unicode-normalization-full-composition-exclusion
+  license: "Unicode License V3; local source research/library/unicode/17.0.0/UNICODE-LICENSE.txt; SHA-256 e7a93b009565cfce55919a381437ac4db883e9da2126fa28b91d12732bc53d96"
+  revision: "Unicode 17.0.0; header DerivedNormalizationProps-17.0.0.txt; date 2025-01-27, 18:09:14 GMT; local source research/library/unicode/17.0.0/DerivedNormalizationProps.txt; 1,377,582 bytes; SHA-256 71fd6a206a2c0cdd41feb6b7f656aa31091db45e9cedc926985d718397f9e488"
+- id: unicode-normalization-corrections-17.0.0
+  title: NormalizationCorrections.txt
+  organization: Unicode Consortium
+  kind: normative-data
+  url: https://www.unicode.org/Public/17.0.0/ucd/NormalizationCorrections.txt
+  authority: primary
+  integration: pinned-local-data
+  used_for:
+  - unicode-normalization-corrections
+  - unicode-normalization-stability-history
+  license: "Unicode License V3; local source research/library/unicode/17.0.0/UNICODE-LICENSE.txt; SHA-256 e7a93b009565cfce55919a381437ac4db883e9da2126fa28b91d12732bc53d96"
+  revision: "Unicode 17.0.0; header NormalizationCorrections-17.0.0.txt; date 2025-08-01; local source research/library/unicode/17.0.0/NormalizationCorrections.txt; 2,214 bytes; SHA-256 32cdfbfd01844f1fcd0b3c9da53a1f9cba7d3eeaba278f8d1330fdafd57e85c0"
+- id: unicode-data-17.0.0
+  title: UnicodeData.txt
+  organization: Unicode Consortium
+  kind: normative-data
+  url: https://www.unicode.org/Public/17.0.0/ucd/UnicodeData.txt
+  authority: primary
+  integration: pinned-local-data
+  used_for:
+  - unicode-normalization-decomposition-mappings
+  - unicode-normalization-canonical-combining-class
+  license: "Unicode License V3; local source research/library/unicode/17.0.0/UNICODE-LICENSE.txt; SHA-256 e7a93b009565cfce55919a381437ac4db883e9da2126fa28b91d12732bc53d96"
+  revision: "Unicode 17.0.0; no identifying file header; local source research/library/unicode/17.0.0/UnicodeData.txt; 2,198,209 bytes; SHA-256 2e1efc1dcb59c575eedf5ccae60f95229f706ee6d031835247d843c11d96470c"
+- id: unicode-composition-exclusions-17.0.0
+  title: CompositionExclusions.txt
+  organization: Unicode Consortium
+  kind: normative-data
+  url: https://www.unicode.org/Public/17.0.0/ucd/CompositionExclusions.txt
+  authority: primary
+  integration: pinned-local-data
+  used_for:
+  - unicode-normalization-composition-exclusions
+  license: "Unicode License V3; local source research/library/unicode/17.0.0/UNICODE-LICENSE.txt; SHA-256 e7a93b009565cfce55919a381437ac4db883e9da2126fa28b91d12732bc53d96"
+  revision: "Unicode 17.0.0; header CompositionExclusions-17.0.0.txt; date 2025-08-01; local source research/library/unicode/17.0.0/CompositionExclusions.txt; 9,007 bytes; SHA-256 2f239196ef3b5b61db5cc476e9bd80f534d15aa1b74e1be1dea5d042a344c85f"
 - id: unicode-derived-core-properties-17.0.0
   title: DerivedCoreProperties.txt
   organization: Unicode Consortium
