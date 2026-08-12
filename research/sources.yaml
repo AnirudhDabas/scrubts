@@ -56,6 +56,7 @@ sources:
   used_for:
   - unicode-property-semantics
   - unicode-default-ignorable-semantics
+  - unicode-bidi-control-semantics
   license: Unicode copyright and terms of use
   revision: Unicode 17.0.0
 - id: unicode-derived-core-properties-17.0.0
@@ -69,6 +70,29 @@ sources:
   - unicode-default-ignorable-membership
   license: "Unicode License V3; local source research/library/unicode/17.0.0/UNICODE-LICENSE.txt; SHA-256 e7a93b009565cfce55919a381437ac4db883e9da2126fa28b91d12732bc53d96"
   revision: "Unicode 17.0.0; local source research/library/unicode/17.0.0/DerivedCoreProperties.txt; 1,134,783 bytes; SHA-256 24c7fed1195c482faaefd5c1e7eb821c5ee1fb6de07ecdbaa64b56a99da22c08; Default_Ignorable_Code_Point: 27 explicit ranges, 4,174 code points"
+- id: unicode-proplist-17.0.0
+  title: PropList.txt
+  organization: Unicode Consortium
+  kind: normative-data
+  url: https://www.unicode.org/Public/17.0.0/ucd/PropList.txt
+  authority: primary
+  integration: pinned-local-data
+  used_for:
+  - unicode-bidi-control-membership
+  license: "Unicode License V3; local source research/library/unicode/17.0.0/UNICODE-LICENSE.txt; SHA-256 e7a93b009565cfce55919a381437ac4db883e9da2126fa28b91d12732bc53d96"
+  revision: "Unicode 17.0.0; local source research/library/unicode/17.0.0/PropList.txt; 145,465 bytes; SHA-256 130dcddcaadaf071008bdfce1e7743e04fdfbc910886f017d9f9ac931d8c64dd; Bidi_Control: 4 explicit records, 12 code points; canonical range serialization: 60 bytes, SHA-256 217873f8bf2ca674f32afff23b3dc5fd81e4b55b5f6aa978c63417ad29f22674"
+- id: unicode-uax9-17.0.0
+  title: "Unicode Standard Annex #9: Unicode Bidirectional Algorithm"
+  organization: Unicode Consortium
+  kind: standard
+  url: https://www.unicode.org/reports/tr9/tr9-51.html
+  authority: primary
+  integration: specification
+  used_for:
+  - unicode-bidi-control-identities
+  - unicode-bidi-control-behavior
+  license: Unicode copyright and terms of use
+  revision: Unicode 17.0.0; Revision 51
 - id: unicode-uts55
   title: "Unicode Source Code Handling (UTS #55)"
   organization: Unicode Consortium
@@ -78,6 +102,7 @@ sources:
   integration: interpretation-guidance
   used_for:
   - unicode-source-code-security-guidance
+  - unicode-bidi-control-security-interpretation
   license: Unicode copyright and terms of use
   revision: not pinned; guidance only, not property membership
 - id: unicode-uts39
