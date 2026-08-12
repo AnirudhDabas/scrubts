@@ -2,10 +2,9 @@
 
 ## Scope
 
-This contract governs a future deterministic scanner that reports occurrences
-of the Unicode property `Bidi_Control` in a byte artifact interpreted as UTF-8.
-It defines source authority and reporting semantics only; it does not establish
-production support.
+This contract governs the deterministic scanner that reports occurrences of
+the Unicode property `Bidi_Control` in a byte artifact interpreted as UTF-8.
+Production support is recorded separately in `CONFORMANCE.md`.
 
 The mechanism identifier is `unicode.bidi_control`. The mechanism/data version
 is `17.0.0`.
@@ -70,7 +69,7 @@ the raw invisible control as terminal evidence.
 
 ## Status semantics
 
-The future scanner validates the complete input as UTF-8 before classifying
+The scanner validates the complete input as UTF-8 before classifying
 property membership:
 
 - `PRESENT`: valid UTF-8 containing one or more Unicode 17.0.0 `Bidi_Control`
@@ -136,8 +135,6 @@ file-type detection, C2PA inspection, or content transformation.
 
 ## Implementation boundary
 
-This contract does not choose a streaming-decoder architecture. Milestone 3C
-must review whether the existing DICP scanner and Bidi_Control support should
-consume one shared validated scalar stream. Any refactor must be justified by
-that implementation, remain small, and must not introduce a generic scanner,
-registry, plugin, or Unicode framework.
+The production DICP and Bidi_Control scanners consume one shared single-pass
+incremental UTF-8 scalar stream. The implementation remains concrete and does
+not introduce a generic scanner, registry, plugin, or Unicode framework.
