@@ -22,7 +22,7 @@ required public prerequisites.
    interpretation.
 4. Controlled generation, attack, calibration, and comparison experiments live
    in WaterLARP.
-5. Until a supported Claude detector exists, Claude statistical text-watermark
+5. Until a supported Claude detector exists, Claude embedded text-watermark
    status is `UNKNOWN` when the question is requested/relevant.
 
 ## Consequences

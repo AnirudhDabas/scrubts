@@ -12,9 +12,10 @@ Early research/engineering development. The initial scope is intentionally narro
 standards-backed Unicode forensics, C2PA provenance inspection, and a separate
 controlled research harness (**WaterLARP**) for public statistical watermark schemes.
 
-Anthropic has announced model-level text watermarking for supported Claude models.
+Anthropic documents embedded, model-level text watermarking for supported
+Claude-generated text.
 Until scrub.ts has a supported detector with the required prerequisites, Claude
-statistical text-watermark status is **UNKNOWN**, not absent.
+embedded text-watermark status is **UNKNOWN**, not absent.
 
 ## Principles
 

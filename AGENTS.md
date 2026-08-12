@@ -13,7 +13,7 @@ Correctness and evidence semantics outrank feature count.
 6. Deterministic scanners must not depend on an LLM.
 7. Published experiment tables/figures must derive from committed or archived machine-readable results.
 8. Do not silently modify user content.
-9. Claude statistical watermark status remains UNKNOWN unless a supported public/authorized detector can actually evaluate the artifact.
+9. Claude embedded text watermark status remains UNKNOWN unless a supported public/authorized detector can actually evaluate the artifact.
 10. A transformation outcome such as REMOVED is not an observation status.
 
 ## Engineering rules

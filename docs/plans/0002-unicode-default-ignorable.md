@@ -13,7 +13,8 @@ auditable occurrence locations under
 - Normalization or confusable analysis.
 - Sanitization, removal, or any other input transformation.
 - C2PA inspection.
-- Statistical watermark detection, including Claude-specific detection.
+- Statistical watermark detection.
+- Claude-specific embedded text-watermark detection.
 - WaterLARP experiments.
 - A generic scanner, registry, plugin, factory, manager, or engine architecture.
 - A new crate.
