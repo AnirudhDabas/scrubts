@@ -91,8 +91,25 @@ fn json_stdout_contains_only_the_canonical_report() {
     assert_eq!(report.artifact().path(), artifact.path().to_string_lossy());
     assert_eq!(report.artifact().byte_length(), 3);
     assert_eq!(report.artifact().content_sha256().as_str(), ABC_SHA256);
-    assert_eq!(report.findings().len(), 1);
-    let finding = &report.findings()[0];
+    assert_eq!(report.findings().len(), 2);
+    assert_eq!(
+        report.findings()[0].mechanism().id(),
+        "unicode.bidi_control"
+    );
+    assert_eq!(report.findings()[0].status(), FindingStatus::Absent);
+    assert_eq!(
+        report.findings()[0].evidence(),
+        [
+            Evidence::new("locations", "[]"),
+            Evidence::new("locations_truncated", "false"),
+            Evidence::new("total_occurrence_count", "0"),
+        ]
+    );
+    let finding = report
+        .findings()
+        .iter()
+        .find(|finding| finding.mechanism().id() == "unicode.default_ignorable_code_point")
+        .expect("DICP finding exists");
     assert_eq!(
         finding.mechanism().id(),
         "unicode.default_ignorable_code_point"
@@ -109,6 +126,8 @@ fn json_stdout_contains_only_the_canonical_report() {
     );
     assert_eq!(report.limitations().len(), 1);
     assert!(report.limitations()[0].contains("not evaluated"));
+    assert!(report.limitations()[0].contains("Bidi_Control observations"));
+    assert!(!report.limitations()[0].contains("bidi-control"));
     assert!(report.assumptions().is_empty());
 }
 
@@ -125,7 +144,11 @@ fn json_reports_dicp_presence_without_changing_success_exit_semantics() {
     assert!(output.status.success(), "stderr: {}", stderr(&output));
     assert_eq!(stderr(&output), "");
     let report = Report::from_json(stdout(&output).trim_end()).expect("stdout is a report");
-    let finding = &report.findings()[0];
+    let finding = report
+        .findings()
+        .iter()
+        .find(|finding| finding.mechanism().id() == "unicode.default_ignorable_code_point")
+        .expect("DICP finding exists");
     assert_eq!(finding.status(), FindingStatus::Present);
     assert_eq!(
         finding.evidence(),
@@ -172,6 +195,7 @@ fn default_output_is_human_readable_and_neutral() {
     assert!(output.status.success(), "stderr: {}", stderr(&output));
     assert_eq!(stderr(&output), "");
     assert!(stdout(&output).contains("mechanism: Default_Ignorable_Code_Point (Unicode 17.0.0)"));
+    assert!(stdout(&output).contains("mechanism: Bidi_Control (Unicode 17.0.0)"));
     assert!(stdout(&output).contains("status: present"));
     assert!(stdout(&output).contains("\"code_point\":\"U+200B\""));
     assert!(stdout(&output).contains("limitation:"));
@@ -185,6 +209,39 @@ fn default_output_is_human_readable_and_neutral() {
         "watermark removed",
         "clean",
         "safe",
+    ] {
+        assert!(
+            !normalized.contains(prohibited),
+            "prohibited wording: {prohibited}"
+        );
+    }
+}
+
+#[test]
+fn human_output_reports_bidi_identity_without_rendering_the_control() {
+    let artifact = TempArtifact::new("a\u{202e}b".as_bytes());
+    let output = Command::new(env!("CARGO_BIN_EXE_scrub"))
+        .arg("inspect")
+        .arg(artifact.path())
+        .output()
+        .expect("scrub process can run");
+
+    assert!(output.status.success(), "stderr: {}", stderr(&output));
+    assert_eq!(stderr(&output), "");
+    assert!(stdout(&output).contains("mechanism: Bidi_Control (Unicode 17.0.0)"));
+    assert!(stdout(&output).contains("\"code_point\":\"U+202E\""));
+    assert!(stdout(&output).contains("\"abbreviation\":\"RLO\""));
+    assert!(stdout(&output).contains("\"byte_offset\":1"));
+    assert!(stdout(&output).contains("\"scalar_offset\":1"));
+    assert!(!stdout(&output).contains('\u{202e}'));
+
+    let normalized = stdout(&output).to_ascii_lowercase();
+    for prohibited in [
+        "attack",
+        "malicious",
+        "dangerous",
+        "suspicious",
+        "trojan source",
     ] {
         assert!(
             !normalized.contains(prohibited),

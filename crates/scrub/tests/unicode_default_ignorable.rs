@@ -77,8 +77,12 @@ fn real_inspection_path_matches_the_complete_fixture_corpus() {
             .expect("JSON output has one trailing newline");
         assert!(!json.contains('\n'), "{} JSON is one line", fixture.name);
         let report = Report::from_json(json).expect("stdout is a report");
-        assert_eq!(report.findings().len(), 1, "{} finding count", fixture.name);
-        let finding = &report.findings()[0];
+        assert_eq!(report.findings().len(), 2, "{} finding count", fixture.name);
+        let finding = report
+            .findings()
+            .iter()
+            .find(|finding| finding.mechanism().id() == MECHANISM_ID)
+            .expect("DICP finding exists");
         assert_eq!(
             finding.mechanism().id(),
             MECHANISM_ID,
@@ -162,8 +166,12 @@ fn malformed_utf8_carried_across_read_boundary_invalidates_prefix_evidence() {
         report.artifact().content_sha256().as_str(),
         scrub_report::Sha256Digest::from_bytes(expected_digest).as_str()
     );
-    assert_eq!(report.findings().len(), 1);
-    let finding = &report.findings()[0];
+    assert_eq!(report.findings().len(), 2);
+    let finding = report
+        .findings()
+        .iter()
+        .find(|finding| finding.mechanism().id() == MECHANISM_ID)
+        .expect("DICP finding exists");
     assert_eq!(finding.mechanism().id(), MECHANISM_ID);
     assert_eq!(finding.mechanism().version(), UNICODE_VERSION);
     assert_eq!(finding.status(), FindingStatus::Invalid);

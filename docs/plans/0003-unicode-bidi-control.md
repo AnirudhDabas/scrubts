@@ -405,3 +405,170 @@ valid and malformed boundaries, prefix-evidence discard, complete artifact
 SHA-256/length after invalidity, and 256/257 occurrence retention. No subsequent
 Bidi production blocker was found; later wiring must preserve one decoder pass
 feeding independent property observers.
+
+# Milestone 3C-2: Production Unicode 17.0.0 Bidi_Control inspection
+
+## Goal
+
+Emit an independent `unicode.bidi_control` finding from the production CLI for
+every inspected artifact, using the approved Unicode 17.0.0 source contract and
+all 35 frozen fixture cases while retaining exactly one incremental UTF-8 decode
+pass.
+
+## Non-goals
+
+- UAX #9 rendering, reordering, scope, pairing, or balance analysis.
+- Trojan Source, intent, spoofing, or source-code vulnerability classification.
+- Normalization, confusables, sanitization, rewriting, metadata, C2PA,
+  watermark detection, Claude detection, or WaterLARP.
+- A detector trait, registry, plugin, generic Unicode engine, new crate,
+  dependency, async path, unsafe code, whole-file buffer, or second read.
+- A Bidi conformance claim in `CONFORMANCE.md`.
+
+## Sources / authority
+
+- `docs/specs/unicode-bidi-control.md` and the frozen Milestone 3B oracle govern
+  membership, identities, status, evidence, and neutral interpretation.
+- Unicode 17.0.0 `PropList.txt` contributes exactly four ranges and 12 members;
+  UAX #9 Revision 51 contributes the 12 canonical abbreviations.
+- `docs/specs/unicode-default-ignorable.md` governs the existing independent
+  DICP finding and its invalid-input convention.
+- `utf8_stream::Decoder`, reviewed in Milestone 3C-1, remains the sole UTF-8
+  validation and scalar-offset source.
+- `docs/specs/report-schema.md` preserves schema 0.1 and canonical ordering.
+
+## Current state
+
+The artifact loop reads one 65,536-byte slice at a time and feeds that slice to
+SHA-256, DICP inspection, and byte counting. DICP currently owns the shared
+decoder. Production emits one DICP finding and still describes Bidi controls as
+unevaluated. The Bidi source contract and independent 35-case fixture oracle
+exist only in test support.
+
+## Design
+
+Move ownership of the existing decoder to the concrete inspection coordinator
+in `main`. Each validated `ScalarObservation` is delivered in order to one DICP
+state and one Bidi state. The states independently own only property membership,
+counting, first-256 retention, and finding construction. At EOF, the decoder's
+single validity result is passed to both states; invalidity causes each to emit
+its own `INVALID` finding with the established UTF-8 evidence and no prefix
+property evidence.
+
+Represent Bidi membership and identity as one explicit sorted 12-entry table.
+No production source parser or inference from DICP, categories, names, or bidi
+classes is introduced. Let the report model sort the two findings and each
+finding's evidence under its existing canonical ordering.
+
+## Acceptance criteria
+
+- Valid UTF-8 with a Bidi member is `PRESENT`; valid UTF-8 without one is
+  `ABSENT`; malformed or incomplete UTF-8 is `INVALID` for both Unicode
+  findings with all prefix property evidence discarded.
+- Exactly one decoder consumes each artifact slice, and hashing/counting
+  continue over every successful read after terminal invalidity.
+- Production membership equals the frozen four-range oracle over every Unicode
+  scalar value and has exactly 12 members, with exact UAX #9 abbreviations.
+- All 35 frozen fixtures pass through the compiled CLI with exact Bidi evidence,
+  artifact identity, ordering, and non-modification behavior.
+- ZWJ remains DICP `PRESENT` and Bidi `ABSENT`; all 12 controls independently
+  make both findings `PRESENT`.
+- First-256 retention, valid and malformed 65,536-byte boundary behavior, and
+  repeated real-CLI byte determinism are explicitly tested.
+- Human output is control-safe and neutral; the remaining limitation wording no
+  longer describes Bidi observation as unevaluated.
+- No schema, conformance, Cargo, dependency, unrelated documentation, Git index,
+  or history change occurs.
+
+## Implementation steps
+
+1. Add the concrete Bidi observation/finding module and exhaustive production
+   membership tests.
+2. Place the existing decoder above both concrete Unicode states and fan out
+   each scalar observation without adding a generalized observer framework.
+3. Add the 35-case compiled-CLI integration target and focused overlap,
+   retention, boundary, invalid-prefix, non-modification, and determinism
+   assertions.
+4. Update existing DICP and CLI expectations for the second independent finding
+   and update truthful limitation/human-output wording.
+5. Run focused and full validation, inspect all changed paths and Git state, and
+   record the measured outcome here.
+
+## Validation
+
+- `cargo test -p scrub --bin scrub`
+- `cargo test -p scrub --test unicode_bidi_control`
+- `cargo test -p scrub --test unicode_bidi_control_fixtures`
+- `cargo test -p scrub --test unicode_default_ignorable`
+- `cargo test -p scrub --test unicode_default_ignorable_fixtures`
+- `cargo test -p scrub --test cli`
+- `cargo fmt --check`
+- `cargo clippy --workspace --all-targets -- -D warnings`
+- `cargo test --workspace`
+- `git diff --check`
+- `just check`
+- `git diff --stat`
+- `git diff`
+- `git status --short`
+- `git diff --cached --name-only`
+
+## Risks / open questions
+
+- Moving decoder ownership must not create a second validation path or change
+  DICP offsets, evidence, invalid-prefix suppression, or read-loop behavior.
+- Bidi membership must stay independent even though every member overlaps DICP;
+  U+200D and range neighbors are important regression boundaries.
+- Human rendering currently labels every finding as DICP and must become an
+  explicit two-mechanism presentation without rendering the underlying control.
+
+## Outcome
+
+Milestone 3C-2 added one focused production Bidi module with an explicit sorted
+12-entry code-point/UAX #9 abbreviation table. Its concrete state independently
+counts every property occurrence and retains the first 256 canonical locations.
+Valid input emits `PRESENT` or `ABSENT` with the frozen three evidence names;
+invalid or incomplete UTF-8 emits `INVALID` with the existing
+`utf8_validation` convention and no prefix property evidence.
+
+The artifact loop now owns the one Milestone 3C-1 `Decoder`. Every validated
+`ScalarObservation` is delivered in order to the concrete DICP and Bidi states.
+The same successful 65,536-byte read slice still feeds SHA-256 and decoding,
+then contributes to full byte counting. Terminal decoder invalidity does not
+stop later reads, hashing, or counting. One final decoder validity result is
+shared by both findings, while membership, count, retained locations, and
+finding construction remain independent.
+
+Production membership matched the frozen four-range oracle for every Unicode
+scalar value from U+0000 through U+10FFFF, excluding surrogates, with exactly 12
+members. Explicit identity and neighbor assertions confirmed all abbreviations
+and rejected U+200D, U+2065, U+206A, and every tested outer boundary neighbor.
+
+A new compiled-path integration target ran all 35 frozen fixtures through the
+real `scrub inspect ... --json` executable and report parser. Exact mechanism,
+version, status, evidence names/values, counts, retained JSON, truncation,
+offsets, abbreviations, full artifact length/SHA-256, finding order, and input
+non-modification checks passed. This included the six required negative text
+classes; ZWJ separation; all 12 identities; structure-shaped input ordering;
+complete DICP overlap; exact 256/257 retention; the valid RLO at byte/scalar
+offset 65,535; and the 131,074-byte malformed boundary artifact whose third read
+was fully hashed and counted while both property findings discarded prefix
+evidence and finalized `INVALID`.
+
+Eight real CLI executions over the complete 12-control artifact produced
+byte-identical JSON stdout and stderr. The report model retained canonical
+finding and evidence ordering, and Bidi locations remained in original input
+order. Human-output tests confirmed canonical code point, abbreviation, and
+numeric offsets without rendering the raw control or using security/intent
+classifications. The top-level limitation now truthfully identifies both
+Unicode 17.0.0 observations as evaluated and preserves the remaining excluded
+mechanisms.
+
+All requested focused targets passed: 12 binary/unit tests, 5 compiled Bidi
+production tests, 11 Bidi fixture-oracle tests, 5 DICP production tests, 5 DICP
+fixture tests, and 9 CLI tests. `cargo fmt --check`, Clippy for all workspace
+targets with warnings denied, all 55 workspace tests, `git diff --check`, and
+`just check` passed. Final scope inspection found no Cargo manifest/lock, report
+schema, `CONFORMANCE.md`, C2PA/watermark, unrelated seed-document, index, or Git
+history mutation. Pre-existing unrelated untracked documentation remains
+untouched. No contradiction, blocker, or ambiguity was found for independent
+review.

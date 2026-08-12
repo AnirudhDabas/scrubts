@@ -10,11 +10,12 @@ use std::process::ExitCode;
 use scrub_report::{ArtifactIdentity, Report, Sha256Digest, ToolIdentity};
 use sha2::{Digest, Sha256};
 
+mod unicode_bidi_control;
 mod unicode_default_ignorable;
 mod utf8_stream;
 
 const USAGE: &str = "Usage: scrub inspect <path> [--json]";
-const UNEVALUATED_MECHANISMS_LIMITATION: &str = "Inspection is limited to Unicode 17.0.0 Default_Ignorable_Code_Point; bidi-control, normalization, confusable, sanitization, metadata, C2PA, statistical and Claude-specific watermark, and WaterLARP mechanisms are not evaluated.";
+const UNEVALUATED_MECHANISMS_LIMITATION: &str = "Inspection currently evaluates Unicode 17.0.0 Default_Ignorable_Code_Point and Bidi_Control observations; normalization, confusable, sanitization, metadata, C2PA, statistical watermark, Claude-specific embedded watermark detection, and WaterLARP mechanisms are not evaluated.";
 
 fn main() -> ExitCode {
     let command = match parse_args(env::args_os().skip(1)) {
@@ -144,7 +145,9 @@ fn inspect_file(path: &Path) -> Result<Report, InspectError> {
     }
 
     let mut hasher = Sha256::new();
-    let mut unicode_inspection = unicode_default_ignorable::Inspection::new();
+    let mut decoder = utf8_stream::Decoder::new();
+    let mut dicp_inspection = unicode_default_ignorable::Inspection::new();
+    let mut bidi_inspection = unicode_bidi_control::Inspection::new();
     let mut byte_length = 0_u64;
     let mut buffer = [0_u8; 64 * 1024];
     loop {
@@ -158,8 +161,11 @@ fn inspect_file(path: &Path) -> Result<Report, InspectError> {
             break;
         }
         hasher.update(&buffer[..count]);
-        unicode_inspection
-            .inspect_chunk(&buffer[..count])
+        decoder
+            .push(&buffer[..count], |observation| {
+                dicp_inspection.observe(observation).map_err(|_| ())?;
+                bidi_inspection.observe(observation).map_err(|_| ())
+            })
             .map_err(|_| InspectError::ArtifactTooLarge)?;
         let count = u64::try_from(count).map_err(|_| InspectError::ArtifactTooLarge)?;
         byte_length = byte_length
@@ -178,10 +184,14 @@ fn inspect_file(path: &Path) -> Result<Report, InspectError> {
         }
     };
 
+    let valid_utf8 = decoder.finish().is_ok();
     Ok(Report::new(
         ToolIdentity::new("scrub", env!("CARGO_PKG_VERSION")),
         ArtifactIdentity::new(display_path, byte_length, Sha256Digest::from_bytes(digest)),
-        vec![unicode_inspection.finish()],
+        vec![
+            dicp_inspection.finish(valid_utf8),
+            bidi_inspection.finish(valid_utf8),
+        ],
         limitations,
         vec![],
     ))
@@ -232,7 +242,8 @@ fn write_human(writer: &mut impl Write, report: &Report) -> Result<(), OutputErr
     for finding in report.findings() {
         writeln!(
             writer,
-            "mechanism: Default_Ignorable_Code_Point (Unicode {})",
+            "mechanism: {} (Unicode {})",
+            mechanism_display_name(finding.mechanism().id()),
             finding.mechanism().version()
         )?;
         writeln!(writer, "status: {}", finding.status())?;
@@ -247,6 +258,14 @@ fn write_human(writer: &mut impl Write, report: &Report) -> Result<(), OutputErr
         writeln!(writer, "limitation: {limitation}")?;
     }
     Ok(())
+}
+
+fn mechanism_display_name(mechanism_id: &str) -> &str {
+    match mechanism_id {
+        unicode_bidi_control::MECHANISM_ID => "Bidi_Control",
+        unicode_default_ignorable::MECHANISM_ID => "Default_Ignorable_Code_Point",
+        _ => mechanism_id,
+    }
 }
 
 fn write_json(writer: &mut impl Write, report: &Report) -> Result<(), OutputError> {

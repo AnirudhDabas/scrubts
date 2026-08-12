@@ -2,7 +2,7 @@ use std::fmt::Write as _;
 
 use scrub_report::{Evidence, Finding, FindingStatus, MechanismIdentity};
 
-use crate::utf8_stream::{Decoder, PushError, ScalarObservation};
+use crate::utf8_stream::ScalarObservation;
 
 pub(crate) const MECHANISM_ID: &str = "unicode.default_ignorable_code_point";
 pub(crate) const UNICODE_VERSION: &str = "17.0.0";
@@ -49,7 +49,6 @@ struct Location {
 }
 
 pub(crate) struct Inspection {
-    decoder: Decoder,
     total_occurrence_count: u64,
     locations: Vec<Location>,
 }
@@ -57,35 +56,25 @@ pub(crate) struct Inspection {
 impl Inspection {
     pub(crate) fn new() -> Self {
         Self {
-            decoder: Decoder::new(),
             total_occurrence_count: 0,
             locations: Vec::with_capacity(RETAINED_LOCATION_LIMIT),
         }
     }
 
-    pub(crate) fn inspect_chunk(&mut self, bytes: &[u8]) -> Result<(), ScanError> {
-        let Self {
-            decoder,
-            total_occurrence_count,
-            locations,
-        } = self;
-        decoder
-            .push(bytes, |observation| {
-                inspect_scalar(observation, total_occurrence_count, locations)
-            })
-            .map_err(|error| match error {
-                PushError::OffsetOverflow => ScanError::OffsetOverflow,
-                PushError::Observer(error) => error,
-            })
+    pub(crate) fn observe(&mut self, observation: ScalarObservation) -> Result<(), ScanError> {
+        inspect_scalar(
+            observation,
+            &mut self.total_occurrence_count,
+            &mut self.locations,
+        )
     }
 
-    pub(crate) fn finish(self) -> Finding {
+    pub(crate) fn finish(self, valid_utf8: bool) -> Finding {
         let Self {
-            decoder,
             total_occurrence_count,
             locations,
         } = self;
-        if decoder.finish().is_err() {
+        if !valid_utf8 {
             return Finding::new(
                 MechanismIdentity::new(MECHANISM_ID, UNICODE_VERSION),
                 FindingStatus::Invalid,
