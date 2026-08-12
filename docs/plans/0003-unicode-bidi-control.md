@@ -162,3 +162,112 @@ unrelated untracked seed documents.
 
 No Rust, Cargo, dependency, report-schema, production fixture, scanner,
 `CONFORMANCE.md`, staging, or Git history change was made.
+
+# Milestone 3B: Unicode 17.0.0 Bidi_Control fixture oracle
+
+## Goal
+
+Freeze a licensed compact membership oracle and adversarial test-only corpus
+for the approved `unicode.bidi_control` contract before production scanning is
+implemented.
+
+## Non-goals
+
+- Production, CLI, Cargo, dependency, report-schema, or conformance changes.
+- A shared UTF-8 decoder or refactor of the DICP production scanner.
+- UAX #9 reordering, scope matching, Trojan Source detection, security scoring,
+  intent classification, normalization, confusables, or content transformation.
+- Generic Unicode or scanner architecture.
+
+## Sources / authority
+
+Milestone 3A's pinned authorities and reviewed semantics remain unchanged. The
+compact fixture is licensed under the existing checked-in Unicode License V3
+and binds only the four `Bidi_Control` records from Unicode 17.0.0
+`PropList.txt`. UAX #9 Revision 51 supplies the explicit 12-entry abbreviation
+table.
+
+## Current state
+
+The reporting contract exists, but there is no Bidi_Control fixture oracle or
+adversarial corpus. Production does not support the mechanism and
+`CONFORMANCE.md` correctly makes no support claim.
+
+## Design
+
+Add one compact source extract and a test-only Rust oracle independent of
+future production membership code. Keep the four ranges and 12 identities
+explicit. Construct named byte fixtures deterministically in test support and
+test their expected status, complete-input UTF-8 semantics, input-order
+locations, first-256 retention, evidence encoding, and artifact identities.
+
+The corpus covers negatives, each property member, offset divergence,
+structure-shaped sequences without structural interpretation, complete
+membership and DICP overlap, 256/257 occurrences, valid and malformed UTF-8 at
+the 65,536-byte read boundary, and distinct malformed UTF-8 forms. Invalid
+fixtures retain no prefix property evidence.
+
+## Acceptance criteria
+
+- The compact source parses to four sorted, non-overlapping ranges and 12 code
+  points, with exactly 60 canonical bytes and the reviewed semantic digest.
+- The explicit abbreviation table is bijective over the property membership.
+- If the ignored full `PropList.txt` is present, its pinned bytes and digest are
+  verified and its parsed property records exactly match the compact fixture.
+- The committed semantic digest test remains unconditional when the ignored
+  research corpus is absent.
+- Every required corpus category has a descriptive case whose expected
+  evidence is independently checked against the test oracle.
+- Boundary and invalid artifacts have frozen full byte lengths and SHA-256
+  identities; malformed boundary input discards valid-prefix observations.
+- No production, Cargo, report, conformance, unrelated seed, staging, or Git
+  history change occurs.
+
+## Implementation steps
+
+1. Add the licensed compact `Bidi_Control` extract, reusing the existing
+   Unicode License V3 fixture.
+2. Add explicit test-only range, identity, evidence, and corpus definitions.
+3. Add fixture-only source-binding, corpus, boundary, malformed-input,
+   truncation, serialization, non-mutation, and DICP-overlap tests.
+4. Run the narrow fixture target, formatting, lint, workspace tests, repository
+   quality gate, whitespace checks, and final changed-path audit.
+
+## Validation
+
+- `cargo test -p scrub --test unicode_bidi_control_fixtures`
+- `cargo fmt --check`
+- `cargo clippy --workspace --all-targets -- -D warnings`
+- `cargo test --workspace`
+- `git diff --check`
+- `just check`
+- `git diff --stat`
+- `git diff`
+- `git status --short`
+- `git diff --cached --name-only`
+
+## Risks / open questions
+
+- Milestone 3C still owns the smallest streaming-decoder design decision. These
+  fixtures constrain observable behavior without choosing that architecture.
+- The two Unicode properties remain independent claims even though all 12
+  Bidi_Control scalars are DICP members.
+
+## Outcome
+
+Milestone 3B added a licensed compact Unicode 17.0.0 `Bidi_Control` extract,
+an explicit test-only four-range and 12-identity oracle, and a 35-case
+adversarial corpus. Eleven fixture-only tests bind the compact data to the
+60-byte canonical serialization and semantic digest, prove exact parity with
+the locally available pinned `PropList.txt`, and freeze status, offsets,
+evidence serialization, DICP overlap, retention limits, boundary behavior,
+malformed-input evidence discard, full artifact identities, determinism, and
+input non-mutation.
+
+The narrow fixture target passed all 11 tests. `cargo fmt --check`, clippy with
+workspace/all-target warnings denied, all 41 workspace tests, `git diff
+--check`, and `just check` passed. Final path inspection found no changes under
+production or report source, Cargo files, `CONFORMANCE.md`, or unrelated seed
+documents. The Git index remained empty. No source contradiction or scientific
+question blocks Milestone 3C; its streaming-decoder architecture decision
+remains intentionally open.

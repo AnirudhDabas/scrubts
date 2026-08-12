@@ -1,0 +1,18 @@
+# Unicode 17.0.0 Bidi_Control test extract.
+#
+# These property records are copied from PropList-17.0.0.txt, whose complete
+# authoritative file has pinned SHA-256
+# 130dcddcaadaf071008bdfce1e7743e04fdfbc910886f017d9f9ac931d8c64dd.
+# For scrub.ts's canonical serialization of only the ordered four ranges,
+# encode each actual start and end as uppercase six-digit hex START..END plus
+# LF, including singleton ranges. The 60-byte result has SHA-256
+# 217873f8bf2ca674f32afff23b3dc5fd81e4b55b5f6aa978c63417ad29f22674.
+# Source: https://www.unicode.org/Public/17.0.0/ucd/PropList.txt
+# License: Unicode License V3, see UNICODE-LICENSE.txt in this directory.
+
+061C          ; Bidi_Control # Cf       ARABIC LETTER MARK
+200E..200F    ; Bidi_Control # Cf   [2] LEFT-TO-RIGHT MARK..RIGHT-TO-LEFT MARK
+202A..202E    ; Bidi_Control # Cf   [5] LEFT-TO-RIGHT EMBEDDING..RIGHT-TO-LEFT OVERRIDE
+2066..2069    ; Bidi_Control # Cf   [4] LEFT-TO-RIGHT ISOLATE..POP DIRECTIONAL ISOLATE
+
+# Total code points: 12
