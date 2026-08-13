@@ -17,6 +17,13 @@ const BIDI_MECHANISM_ID: &str = "unicode.bidi_control";
 const DICP_MECHANISM_ID: &str = "unicode.default_ignorable_code_point";
 const NFC_MECHANISM_ID: &str = "unicode.normalization.nfc_difference";
 const NFKC_MECHANISM_ID: &str = "unicode.normalization.nfkc_difference";
+const C2PA_IDS: [&str; 5] = [
+    "c2pa.text_manifest_wrapper",
+    "c2pa.manifest_store",
+    "c2pa.manifest_validation",
+    "c2pa.hard_binding",
+    "c2pa.credential_trust",
+];
 const UNICODE_VERSION: &str = "17.0.0";
 static NEXT_TEMP_ID: AtomicU64 = AtomicU64::new(0);
 
@@ -111,7 +118,7 @@ fn real_inspection_path_matches_all_35_frozen_fixtures() {
             "{} stdout is canonical",
             fixture.name
         );
-        assert_eq!(report.findings().len(), 4, "{} finding count", fixture.name);
+        assert_eq!(report.findings().len(), 9, "{} finding count", fixture.name);
         assert_eq!(
             report
                 .findings()
@@ -123,6 +130,11 @@ fn real_inspection_path_matches_all_35_frozen_fixtures() {
                 DICP_MECHANISM_ID,
                 NFC_MECHANISM_ID,
                 NFKC_MECHANISM_ID,
+                C2PA_IDS[0],
+                C2PA_IDS[1],
+                C2PA_IDS[2],
+                C2PA_IDS[3],
+                C2PA_IDS[4],
             ],
             "{} finding order",
             fixture.name
@@ -298,6 +310,11 @@ fn actual_json_and_stderr_bytes_are_identical_across_eight_runs() {
             DICP_MECHANISM_ID,
             NFC_MECHANISM_ID,
             NFKC_MECHANISM_ID,
+            C2PA_IDS[0],
+            C2PA_IDS[1],
+            C2PA_IDS[2],
+            C2PA_IDS[3],
+            C2PA_IDS[4],
         ]
     );
     let bidi = finding(&report, BIDI_MECHANISM_ID);

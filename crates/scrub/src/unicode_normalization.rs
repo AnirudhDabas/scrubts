@@ -24,6 +24,11 @@ pub(crate) fn valid_findings(input: &str) -> Result<[Finding; 2], AnalysisError>
     ])
 }
 
+#[allow(dead_code)] // Some integration targets include this module without the C2PA caller.
+pub(crate) fn nfc_utf8_byte_length(input: &str) -> Result<u64, AnalysisError> {
+    Ok(normalized_summary(input.nfc())?.byte_length)
+}
+
 pub(crate) fn invalid_findings() -> [Finding; 2] {
     [
         invalid_finding(NFC_MECHANISM_ID),

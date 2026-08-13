@@ -66,7 +66,7 @@ fn compiled_cli_matches_the_complete_scrub_specific_corpus() {
             .expect("JSON output has one trailing newline");
         assert!(!json.contains('\n'), "{} JSON is one line", fixture.name);
         let report = Report::from_json(json).expect("stdout is a report");
-        assert_eq!(report.findings().len(), 4, "{} finding count", fixture.name);
+        assert_eq!(report.findings().len(), 9, "{} finding count", fixture.name);
         assert_eq!(
             report
                 .findings()
@@ -78,6 +78,11 @@ fn compiled_cli_matches_the_complete_scrub_specific_corpus() {
                 "unicode.default_ignorable_code_point",
                 NFC_MECHANISM_ID,
                 NFKC_MECHANISM_ID,
+                "c2pa.text_manifest_wrapper",
+                "c2pa.manifest_store",
+                "c2pa.manifest_validation",
+                "c2pa.hard_binding",
+                "c2pa.credential_trust",
             ],
             "{} finding order",
             fixture.name
@@ -239,7 +244,18 @@ fn complete_human_output_is_frozen_for_a_canonical_difference() {
                 "evidence: normalized_scalar_count=1\n",
                 "evidence: normalized_sha256=4a99557e4033c3539de2eb65472017cad5f9557f7a0625a09f1c3f6e2ba69c4c\n",
                 "finding limitation: An NFKC difference is a neutral Unicode compatibility-normalization observation; compatibility folding can erase distinctions and must not be interpreted as sanitization, security risk, provenance, authorship, intent, or watermark presence.\n",
-                "limitation: Inspection currently evaluates Unicode 17.0.0 Default_Ignorable_Code_Point, Bidi_Control, NFC-difference, and NFKC-difference observations; confusable, sanitization, metadata, C2PA, statistical watermark, Claude-specific embedded watermark detection, and WaterLARP mechanisms are not evaluated.\n",
+                "mechanism: c2pa.text_manifest_wrapper (C2PA 2.4)\n",
+                "status: absent\n",
+                "finding limitation: C2PA 2.4 Appendix A.8 remains under review and may change; this carrier is distinct from Claude embedded text watermarking.\n",
+                "mechanism: c2pa.manifest_store (C2PA 2.4)\n",
+                "status: not_applicable\n",
+                "mechanism: c2pa.manifest_validation (C2PA 2.4)\n",
+                "status: not_applicable\n",
+                "mechanism: c2pa.hard_binding (C2PA 2.4)\n",
+                "status: not_applicable\n",
+                "mechanism: c2pa.credential_trust (C2PA 2.4)\n",
+                "status: not_applicable\n",
+                "limitation: Inspection evaluates Unicode 17.0.0 Default_Ignorable_Code_Point, Bidi_Control, NFC-difference, and NFKC-difference observations plus C2PA 2.4 Appendix A.8 carrier evidence and embedded PNG, JPEG, and SVG provenance; confusable, sanitization, unrelated metadata, statistical watermark, Claude-specific embedded text watermark detection, and WaterLARP mechanisms are not evaluated.\n",
             ),
             artifact.path().display()
         )

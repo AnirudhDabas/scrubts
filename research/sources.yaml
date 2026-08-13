@@ -1,5 +1,5 @@
 schema_version: 2
-last_verified: 2026-08-12
+last_verified: 2026-08-13
 sources:
 - id: anthropic-claude-marking
   title: How Claude marks AI-generated content
@@ -8,7 +8,7 @@ sources:
   url: https://support.claude.com/en/articles/16266773-how-claude-marks-ai-generated-content
   authority: primary
   integration: documentation
-  verified: 2026-08-11
+  verified: 2026-08-12
   used_for:
   - claude-scope
   - claude-limitations
@@ -23,6 +23,7 @@ sources:
     the underlying algorithm and detection details are not public.
   - The source does not identify KGW, SynthID, green-list token biasing, or any
     other specific statistical watermark algorithm as Claude's mechanism.
+  revision: "retrieved 2026-08-12; HTTP representation 336,874 bytes; decoded HTML UTF-8 SHA-256 07c131ea092d782711edf40c35b0251c38bfaeb9280cc6c1ed96f86e348fd5d5"
   license: documentation-terms
 - id: c2pa-spec-2.4
   title: C2PA Technical Specification 2.4
@@ -33,20 +34,64 @@ sources:
   integration: specification
   used_for:
   - c2pa-semantics
+  - c2pa-a8-wrapper
+  - c2pa-validation-status-codes
+  - c2pa-png-jpeg-svg-embedding
   - unicode-normalization-downstream-interoperability
-  license: verify-current-spec-terms
+  license: CC-BY-4.0
+  revision: "2.4; retrieved 2026-08-12; ignored local source research/library/c2pa/2.4/C2PA_Specification.html; 1,065,169 bytes; SHA-256 d55caebd96206f0de667962a4bab7098c6b6468fba68f8b55bcdd3a12d1ed26d"
 - id: c2pa-rs
   title: c2pa-rs
   organization: Content Authenticity Initiative
   kind: reference-implementation
   url: https://github.com/contentauth/c2pa-rs
   authority: reference
-  integration: dependency-or-adapter
+  integration: exact-crates.io-dependency
   used_for:
   - c2pa-parsing
   - c2pa-validation
+  - c2pa-ocsp-clock-regression
+  - c2pa-certificate-status-clock-regression
   license: MIT OR Apache-2.0
-  revision: pin-when-integrated
+  revision: "c2pa 0.90.12; crates.io checksum and local .crate SHA-256 0bcd2a168e8ce506789d4e5a66c286e5aa4944bc2181d75360b3ddf723ac4264; unyanked; published 2026-08-12T18:42:01Z; rust-version 1.88.0; annotated tag c2pa-v0.90.12 object f15dd8f4804312eb5fa76ef7b4c9f01fd33dc322; commit ae0c3fde8ea399bf7f12379bb44e38b2738b8369; exact imported source-fixture paths, lengths, Git blob OIDs, SHA-256 identities, and license are recorded in crates/scrub/tests/fixtures/c2pa/README.md; production features default-features=false and rust_native_crypto only; no file_io, HTTP, remote-manifest, PDF, unstable text, or OpenSSL feature; 244 unique normal packages in the resolved Windows tree and 299 across all target-conditioned normal metadata; no missing license field and no resolved reqwest, ureq, hyper, curl, isahc, or openssl package; license expressions are permissive combinations of MIT, Apache-2.0, BSD-1/2/3-Clause, Unicode-3.0, Zlib, BSL-1.0, 0BSD, Unlicense, and optional LGPL-2.1-or-later alternatives"
+- id: c2pa-public-testfiles-22beccc
+  title: C2PA public test files
+  organization: Coalition for Content Provenance and Authenticity
+  kind: official-test-assets
+  url: https://github.com/c2pa-org/public-testfiles
+  authority: primary
+  integration: pinned-local-fixtures
+  used_for:
+  - c2pa-jpeg-known-good
+  - c2pa-data-hash-tamper
+  - c2pa-signature-tamper
+  - c2pa-claim-ingredient-tamper
+  license: "CC-BY-SA-4.0; exact license text at crates/scrub/tests/fixtures/c2pa/public-testfiles/LICENSE; SHA-256 23ee78c8bae49cf08ea2f0c84945c66b987ebe4520881fb51b3dad4fb43d07c2"
+  revision: "commit 22beccc075707475b038d8789d0136c009e43143; exact paths, lengths, Git blobs, and SHA-256 identities recorded in crates/scrub/tests/fixtures/c2pa/README.md"
+- id: c2pa-text-3.0.0-cross-check
+  title: c2pa-text
+  organization: EncypherAI contributors
+  kind: independent-reference-implementation
+  url: https://crates.io/crates/c2pa-text/3.0.0
+  code: https://github.com/encypherai/c2pa-text
+  authority: reference
+  integration: authoring-time-cross-check-only
+  used_for:
+  - c2pa-a8-big-endian-cross-check
+  - c2pa-a8-variation-selector-mapping-cross-check
+  license: MIT
+  revision: "3.0.0; inspected from the crates.io package on 2026-08-12; not a production or CI dependency; its permissive trailing-wrapper-padding behavior is not adopted because C2PA 2.4 defines no padding field"
+- id: xml-1.0-fifth-edition
+  title: Extensible Markup Language (XML) 1.0 (Fifth Edition)
+  organization: World Wide Web Consortium
+  kind: standard
+  url: https://www.w3.org/TR/2008/REC-xml-20081126/
+  authority: primary
+  integration: specification
+  used_for:
+  - svg-processing-instruction-target
+  license: W3C-Document-License
+  revision: "Fifth Edition; W3C Recommendation 26 November 2008; productions [4] NameStartChar, [4a] NameChar, [5] Name, and [16] PI reviewed 2026-08-13"
 - id: unicode-uax44-17.0.0
   title: "Unicode Standard Annex #44: Unicode Character Database"
   organization: Unicode Consortium

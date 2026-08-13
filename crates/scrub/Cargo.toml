@@ -6,6 +6,7 @@ rust-version.workspace = true
 license.workspace = true
 
 [dependencies]
+c2pa = { version = "=0.90.12", default-features = false, features = ["rust_native_crypto"] }
 scrub-report = { path = "../scrub-report" }
 sha2 = "0.11.0"
 unicode-normalization = "=0.1.25"

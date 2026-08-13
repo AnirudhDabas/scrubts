@@ -91,7 +91,7 @@ fn json_stdout_contains_only_the_canonical_report() {
     assert_eq!(report.artifact().path(), artifact.path().to_string_lossy());
     assert_eq!(report.artifact().byte_length(), 3);
     assert_eq!(report.artifact().content_sha256().as_str(), ABC_SHA256);
-    assert_eq!(report.findings().len(), 4);
+    assert_eq!(report.findings().len(), 9);
     assert_eq!(
         report.findings()[0].mechanism().id(),
         "unicode.bidi_control"

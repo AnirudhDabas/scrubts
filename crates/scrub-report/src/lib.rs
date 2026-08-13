@@ -417,9 +417,28 @@ impl Report {
         for finding in findings.iter_mut() {
             finding.canonicalize();
         }
-        findings.sort();
+        findings.sort_by(|left, right| {
+            mechanism_order(left.mechanism().id())
+                .cmp(&mechanism_order(right.mechanism().id()))
+                .then_with(|| left.cmp(right))
+        });
         limitations.sort();
         assumptions.sort();
+    }
+}
+
+fn mechanism_order(id: &str) -> u8 {
+    match id {
+        "unicode.bidi_control" => 0,
+        "unicode.default_ignorable_code_point" => 1,
+        "unicode.normalization.nfc_difference" => 2,
+        "unicode.normalization.nfkc_difference" => 3,
+        "c2pa.text_manifest_wrapper" => 4,
+        "c2pa.manifest_store" => 5,
+        "c2pa.manifest_validation" => 6,
+        "c2pa.hard_binding" => 7,
+        "c2pa.credential_trust" => 8,
+        _ => 9,
     }
 }
 
@@ -587,6 +606,54 @@ mod tests {
         assert_eq!(
             Report::from_json(&canonical).expect("canonical report parses"),
             parsed
+        );
+    }
+
+    #[test]
+    fn production_mechanisms_have_the_frozen_unicode_then_c2pa_order() {
+        let ids = [
+            "c2pa.credential_trust",
+            "unicode.normalization.nfkc_difference",
+            "c2pa.manifest_store",
+            "unicode.bidi_control",
+            "c2pa.text_manifest_wrapper",
+            "unicode.default_ignorable_code_point",
+            "c2pa.hard_binding",
+            "unicode.normalization.nfc_difference",
+            "c2pa.manifest_validation",
+        ];
+        let findings = ids
+            .into_iter()
+            .map(|id| {
+                Finding::new(
+                    MechanismIdentity::new(id, "1"),
+                    FindingStatus::Unknown,
+                    vec![],
+                    vec![],
+                    vec![],
+                )
+            })
+            .collect();
+
+        let report = report(findings);
+        let actual: Vec<_> = report
+            .findings()
+            .iter()
+            .map(|finding| finding.mechanism().id())
+            .collect();
+        assert_eq!(
+            actual,
+            [
+                "unicode.bidi_control",
+                "unicode.default_ignorable_code_point",
+                "unicode.normalization.nfc_difference",
+                "unicode.normalization.nfkc_difference",
+                "c2pa.text_manifest_wrapper",
+                "c2pa.manifest_store",
+                "c2pa.manifest_validation",
+                "c2pa.hard_binding",
+                "c2pa.credential_trust",
+            ]
         );
     }
 

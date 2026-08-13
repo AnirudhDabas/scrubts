@@ -10,13 +10,14 @@ use std::process::ExitCode;
 use scrub_report::{ArtifactIdentity, Report, Sha256Digest, ToolIdentity};
 use sha2::{Digest, Sha256};
 
+mod c2pa_provenance;
 mod unicode_bidi_control;
 mod unicode_default_ignorable;
 mod unicode_normalization;
 mod utf8_stream;
 
 const USAGE: &str = "Usage: scrub inspect <path> [--json]";
-const UNEVALUATED_MECHANISMS_LIMITATION: &str = "Inspection currently evaluates Unicode 17.0.0 Default_Ignorable_Code_Point, Bidi_Control, NFC-difference, and NFKC-difference observations; confusable, sanitization, metadata, C2PA, statistical watermark, Claude-specific embedded watermark detection, and WaterLARP mechanisms are not evaluated.";
+const UNEVALUATED_MECHANISMS_LIMITATION: &str = "Inspection evaluates Unicode 17.0.0 Default_Ignorable_Code_Point, Bidi_Control, NFC-difference, and NFKC-difference observations plus C2PA 2.4 Appendix A.8 carrier evidence and embedded PNG, JPEG, and SVG provenance; confusable, sanitization, unrelated metadata, statistical watermark, Claude-specific embedded text watermark detection, and WaterLARP mechanisms are not evaluated.";
 
 fn main() -> ExitCode {
     let command = match parse_args(env::args_os().skip(1)) {
@@ -155,6 +156,10 @@ fn inspect_reader(path: &Path, reader: &mut impl Read) -> Result<Report, Inspect
     let mut bidi_inspection = unicode_bidi_control::Inspection::new();
     let mut normalization_bytes = Vec::new();
     let mut normalization_buffer_failed = false;
+    let mut c2pa_prefix = [0_u8; 8];
+    let mut c2pa_prefix_len = 0_usize;
+    let mut c2pa_binary: Option<(c2pa_provenance::BinaryFormat, Vec<u8>)> = None;
+    let mut c2pa_buffer_failed = false;
     let mut byte_length = 0_u64;
     let mut buffer = [0_u8; 64 * 1024];
     loop {
@@ -166,6 +171,38 @@ fn inspect_reader(path: &Path, reader: &mut impl Read) -> Result<Report, Inspect
             })?;
         if count == 0 {
             break;
+        }
+        if !c2pa_buffer_failed {
+            if let Some((_, bytes)) = c2pa_binary.as_mut() {
+                if bytes.try_reserve(count).is_err() {
+                    c2pa_buffer_failed = true;
+                    bytes.clear();
+                } else {
+                    bytes.extend_from_slice(&buffer[..count]);
+                }
+            } else if c2pa_prefix_len < c2pa_prefix.len() {
+                let copied = (c2pa_prefix.len() - c2pa_prefix_len).min(count);
+                c2pa_prefix[c2pa_prefix_len..c2pa_prefix_len + copied]
+                    .copy_from_slice(&buffer[..copied]);
+                c2pa_prefix_len += copied;
+                if let Some(format) =
+                    c2pa_provenance::detect_binary(&c2pa_prefix[..c2pa_prefix_len])
+                {
+                    let previous =
+                        usize::try_from(byte_length).map_err(|_| InspectError::ArtifactTooLarge)?;
+                    let required = previous
+                        .checked_add(count)
+                        .ok_or(InspectError::ArtifactTooLarge)?;
+                    let mut bytes = Vec::new();
+                    if bytes.try_reserve(required).is_err() {
+                        c2pa_buffer_failed = true;
+                    } else {
+                        bytes.extend_from_slice(&c2pa_prefix[..previous]);
+                        bytes.extend_from_slice(&buffer[..count]);
+                        c2pa_binary = Some((format, bytes));
+                    }
+                }
+            }
         }
         hasher.update(&buffer[..count]);
         decoder
@@ -193,6 +230,9 @@ fn inspect_reader(path: &Path, reader: &mut impl Read) -> Result<Report, Inspect
     if normalization_buffer_failed {
         return Err(InspectError::NormalizationBufferAllocation);
     }
+    if c2pa_buffer_failed {
+        return Err(InspectError::C2paBufferAllocation);
+    }
 
     let digest: [u8; 32] = hasher.finalize().into();
     let mut limitations = vec![UNEVALUATED_MECHANISMS_LIMITATION.to_owned()];
@@ -213,18 +253,37 @@ fn inspect_reader(path: &Path, reader: &mut impl Read) -> Result<Report, Inspect
     } else {
         unicode_normalization::invalid_findings()
     };
+    let c2pa_findings = if let Some((format, bytes)) = c2pa_binary {
+        c2pa_provenance::binary_format_findings(format, &bytes).map_err(InspectError::C2pa)?
+    } else if valid_utf8 {
+        let input = std::str::from_utf8(&normalization_bytes)
+            .map_err(|_| InspectError::NormalizationUtf8Invariant)?;
+        c2pa_provenance::valid_text_findings(input).map_err(InspectError::C2pa)?
+    } else if is_plain_text_path(path) {
+        c2pa_provenance::malformed_text_findings()
+    } else {
+        c2pa_provenance::unsupported_findings()
+    };
+    let mut findings = vec![
+        dicp_inspection.finish(valid_utf8),
+        bidi_inspection.finish(valid_utf8),
+        nfc_finding,
+        nfkc_finding,
+    ];
+    findings.extend(c2pa_findings);
     Ok(Report::new(
         ToolIdentity::new("scrub", env!("CARGO_PKG_VERSION")),
         ArtifactIdentity::new(display_path, byte_length, Sha256Digest::from_bytes(digest)),
-        vec![
-            dicp_inspection.finish(valid_utf8),
-            bidi_inspection.finish(valid_utf8),
-            nfc_finding,
-            nfkc_finding,
-        ],
+        findings,
         limitations,
         vec![],
     ))
+}
+
+fn is_plain_text_path(path: &Path) -> bool {
+    path.extension()
+        .and_then(|extension| extension.to_str())
+        .is_some_and(|extension| extension.eq_ignore_ascii_case("txt"))
 }
 
 #[derive(Debug)]
@@ -234,8 +293,10 @@ enum InspectError {
     NotRegularFile(PathBuf),
     ArtifactTooLarge,
     NormalizationBufferAllocation,
+    C2paBufferAllocation,
     NormalizationUtf8Invariant,
     Normalization(unicode_normalization::AnalysisError),
+    C2pa(c2pa_provenance::AnalysisError),
 }
 
 impl fmt::Display for InspectError {
@@ -258,9 +319,13 @@ impl fmt::Display for InspectError {
             Self::NormalizationBufferAllocation => {
                 formatter.write_str("could not allocate the whole-artifact normalization buffer")
             }
+            Self::C2paBufferAllocation => {
+                formatter.write_str("could not allocate the exact-byte C2PA artifact buffer")
+            }
             Self::NormalizationUtf8Invariant => formatter
                 .write_str("internal UTF-8 validation inconsistency while preparing normalization"),
             Self::Normalization(error) => write!(formatter, "normalization failed: {error}"),
+            Self::C2pa(error) => write!(formatter, "C2PA inspection failed: {error}"),
         }
     }
 }
@@ -272,8 +337,10 @@ impl Error for InspectError {
             Self::NotRegularFile(_)
             | Self::ArtifactTooLarge
             | Self::NormalizationBufferAllocation
+            | Self::C2paBufferAllocation
             | Self::NormalizationUtf8Invariant => None,
             Self::Normalization(error) => Some(error),
+            Self::C2pa(error) => Some(error),
         }
     }
 }
@@ -285,8 +352,13 @@ fn write_human(writer: &mut impl Write, report: &Report) -> Result<(), OutputErr
     for finding in report.findings() {
         writeln!(
             writer,
-            "mechanism: {} (Unicode {})",
+            "mechanism: {} ({} {})",
             mechanism_display_name(finding.mechanism().id()),
+            if finding.mechanism().id().starts_with("c2pa.") {
+                "C2PA"
+            } else {
+                "Unicode"
+            },
             finding.mechanism().version()
         )?;
         writeln!(writer, "status: {}", finding.status())?;
@@ -360,6 +432,7 @@ fn write_diagnostic(arguments: &fmt::Arguments<'_>) {
 #[cfg(test)]
 mod tests {
     use super::*;
+    use scrub_report::FindingStatus;
 
     struct PartitionedReader<'a> {
         input: &'a [u8],
@@ -425,6 +498,43 @@ mod tests {
         for chunks in [vec![1], vec![2], vec![1, 3, 2, 5, 1, 4]] {
             let actual = inspect_reader(path, &mut PartitionedReader::new(input, chunks))
                 .expect("partitioned inspection succeeds");
+            assert_eq!(actual, expected);
+        }
+    }
+
+    #[test]
+    fn a8_prefix_and_supplementary_selectors_are_partition_invariant() {
+        let mut input = String::from("prefix");
+        input.push('\u{feff}');
+        for byte in b"C2PATXT\0"
+            .iter()
+            .copied()
+            .chain([1])
+            .chain(1_u32.to_be_bytes())
+            .chain([255])
+        {
+            let scalar = if byte < 16 {
+                0xfe00 + u32::from(byte)
+            } else {
+                0xe0100 + u32::from(byte) - 16
+            };
+            input.push(char::from_u32(scalar).expect("test mapping yields a scalar"));
+        }
+
+        let path = Path::new("partitioned-wrapper.txt");
+        let expected = inspect_reader(path, &mut io::Cursor::new(input.as_bytes()))
+            .expect("unpartitioned inspection succeeds");
+        let wrapper = expected
+            .findings()
+            .iter()
+            .find(|finding| finding.mechanism().id() == "c2pa.text_manifest_wrapper")
+            .expect("wrapper finding exists");
+        assert_eq!(wrapper.status(), FindingStatus::Present);
+
+        for chunks in [vec![1], vec![2, 1, 3], vec![5, 1, 4, 2, 1]] {
+            let actual =
+                inspect_reader(path, &mut PartitionedReader::new(input.as_bytes(), chunks))
+                    .expect("partitioned inspection succeeds");
             assert_eq!(actual, expected);
         }
     }
