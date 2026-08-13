@@ -12,10 +12,11 @@ use sha2::{Digest, Sha256};
 
 mod unicode_bidi_control;
 mod unicode_default_ignorable;
+mod unicode_normalization;
 mod utf8_stream;
 
 const USAGE: &str = "Usage: scrub inspect <path> [--json]";
-const UNEVALUATED_MECHANISMS_LIMITATION: &str = "Inspection currently evaluates Unicode 17.0.0 Default_Ignorable_Code_Point and Bidi_Control observations; normalization, confusable, sanitization, metadata, C2PA, statistical watermark, Claude-specific embedded watermark detection, and WaterLARP mechanisms are not evaluated.";
+const UNEVALUATED_MECHANISMS_LIMITATION: &str = "Inspection currently evaluates Unicode 17.0.0 Default_Ignorable_Code_Point, Bidi_Control, NFC-difference, and NFKC-difference observations; confusable, sanitization, metadata, C2PA, statistical watermark, Claude-specific embedded watermark detection, and WaterLARP mechanisms are not evaluated.";
 
 fn main() -> ExitCode {
     let command = match parse_args(env::args_os().skip(1)) {
@@ -144,14 +145,20 @@ fn inspect_file(path: &Path) -> Result<Report, InspectError> {
         return Err(InspectError::NotRegularFile(path.to_path_buf()));
     }
 
+    inspect_reader(path, &mut file)
+}
+
+fn inspect_reader(path: &Path, reader: &mut impl Read) -> Result<Report, InspectError> {
     let mut hasher = Sha256::new();
     let mut decoder = utf8_stream::Decoder::new();
     let mut dicp_inspection = unicode_default_ignorable::Inspection::new();
     let mut bidi_inspection = unicode_bidi_control::Inspection::new();
+    let mut normalization_bytes = Vec::new();
+    let mut normalization_buffer_failed = false;
     let mut byte_length = 0_u64;
     let mut buffer = [0_u8; 64 * 1024];
     loop {
-        let count = file
+        let count = reader
             .read(&mut buffer)
             .map_err(|source| InspectError::Read {
                 path: path.to_path_buf(),
@@ -167,10 +174,24 @@ fn inspect_file(path: &Path) -> Result<Report, InspectError> {
                 bidi_inspection.observe(observation).map_err(|_| ())
             })
             .map_err(|_| InspectError::ArtifactTooLarge)?;
+        if decoder.is_potentially_valid() && !normalization_buffer_failed {
+            if normalization_bytes.try_reserve(count).is_err() {
+                normalization_buffer_failed = true;
+                normalization_bytes.clear();
+            } else {
+                normalization_bytes.extend_from_slice(&buffer[..count]);
+            }
+        } else if !decoder.is_potentially_valid() {
+            normalization_bytes.clear();
+        }
         let count = u64::try_from(count).map_err(|_| InspectError::ArtifactTooLarge)?;
         byte_length = byte_length
             .checked_add(count)
             .ok_or(InspectError::ArtifactTooLarge)?;
+    }
+
+    if normalization_buffer_failed {
+        return Err(InspectError::NormalizationBufferAllocation);
     }
 
     let digest: [u8; 32] = hasher.finalize().into();
@@ -185,12 +206,21 @@ fn inspect_file(path: &Path) -> Result<Report, InspectError> {
     };
 
     let valid_utf8 = decoder.finish().is_ok();
+    let [nfc_finding, nfkc_finding] = if valid_utf8 {
+        let input = std::str::from_utf8(&normalization_bytes)
+            .map_err(|_| InspectError::NormalizationUtf8Invariant)?;
+        unicode_normalization::valid_findings(input).map_err(InspectError::Normalization)?
+    } else {
+        unicode_normalization::invalid_findings()
+    };
     Ok(Report::new(
         ToolIdentity::new("scrub", env!("CARGO_PKG_VERSION")),
         ArtifactIdentity::new(display_path, byte_length, Sha256Digest::from_bytes(digest)),
         vec![
             dicp_inspection.finish(valid_utf8),
             bidi_inspection.finish(valid_utf8),
+            nfc_finding,
+            nfkc_finding,
         ],
         limitations,
         vec![],
@@ -203,6 +233,9 @@ enum InspectError {
     Read { path: PathBuf, source: io::Error },
     NotRegularFile(PathBuf),
     ArtifactTooLarge,
+    NormalizationBufferAllocation,
+    NormalizationUtf8Invariant,
+    Normalization(unicode_normalization::AnalysisError),
 }
 
 impl fmt::Display for InspectError {
@@ -222,6 +255,12 @@ impl fmt::Display for InspectError {
                 )
             }
             Self::ArtifactTooLarge => formatter.write_str("artifact byte length exceeds u64"),
+            Self::NormalizationBufferAllocation => {
+                formatter.write_str("could not allocate the whole-artifact normalization buffer")
+            }
+            Self::NormalizationUtf8Invariant => formatter
+                .write_str("internal UTF-8 validation inconsistency while preparing normalization"),
+            Self::Normalization(error) => write!(formatter, "normalization failed: {error}"),
         }
     }
 }
@@ -230,7 +269,11 @@ impl Error for InspectError {
     fn source(&self) -> Option<&(dyn Error + 'static)> {
         match self {
             Self::Open { source, .. } | Self::Read { source, .. } => Some(source),
-            Self::NotRegularFile(_) | Self::ArtifactTooLarge => None,
+            Self::NotRegularFile(_)
+            | Self::ArtifactTooLarge
+            | Self::NormalizationBufferAllocation
+            | Self::NormalizationUtf8Invariant => None,
+            Self::Normalization(error) => Some(error),
         }
     }
 }
@@ -264,6 +307,8 @@ fn mechanism_display_name(mechanism_id: &str) -> &str {
     match mechanism_id {
         unicode_bidi_control::MECHANISM_ID => "Bidi_Control",
         unicode_default_ignorable::MECHANISM_ID => "Default_Ignorable_Code_Point",
+        unicode_normalization::NFC_MECHANISM_ID => "NFC difference",
+        unicode_normalization::NFKC_MECHANISM_ID => "NFKC difference",
         _ => mechanism_id,
     }
 }
@@ -316,6 +361,40 @@ fn write_diagnostic(arguments: &fmt::Arguments<'_>) {
 mod tests {
     use super::*;
 
+    struct PartitionedReader<'a> {
+        input: &'a [u8],
+        chunks: Vec<usize>,
+        offset: usize,
+        read_index: usize,
+    }
+
+    impl<'a> PartitionedReader<'a> {
+        fn new(input: &'a [u8], chunks: Vec<usize>) -> Self {
+            Self {
+                input,
+                chunks,
+                offset: 0,
+                read_index: 0,
+            }
+        }
+    }
+
+    impl Read for PartitionedReader<'_> {
+        fn read(&mut self, output: &mut [u8]) -> io::Result<usize> {
+            if self.offset == self.input.len() {
+                return Ok(0);
+            }
+            let requested = self.chunks[self.read_index % self.chunks.len()];
+            self.read_index += 1;
+            let count = requested
+                .min(output.len())
+                .min(self.input.len() - self.offset);
+            output[..count].copy_from_slice(&self.input[self.offset..self.offset + count]);
+            self.offset += count;
+            Ok(count)
+        }
+    }
+
     #[test]
     fn parses_json_before_or_after_path() {
         for arguments in [
@@ -334,5 +413,19 @@ mod tests {
             .expect("arguments are valid");
         assert_eq!(parsed.path, PathBuf::from("--artifact"));
         assert_eq!(parsed.output, Output::Human);
+    }
+
+    #[test]
+    fn complete_inspection_is_invariant_under_arbitrary_read_partitions() {
+        let input = "\u{754c}\u{1f600}e\u{301}\u{fb03}".as_bytes();
+        let path = Path::new("partitioned-test-artifact");
+        let expected = inspect_reader(path, &mut io::Cursor::new(input))
+            .expect("unpartitioned inspection succeeds");
+
+        for chunks in [vec![1], vec![2], vec![1, 3, 2, 5, 1, 4]] {
+            let actual = inspect_reader(path, &mut PartitionedReader::new(input, chunks))
+                .expect("partitioned inspection succeeds");
+            assert_eq!(actual, expected);
+        }
     }
 }

@@ -79,6 +79,20 @@ sources:
   - unicode-normalization-npss-distinction
   license: Unicode copyright and terms of use
   revision: "Unicode 17.0.0; Revision 57; 2025-07-30; local source research/library/unicode/17.0.0/specs/UAX15-Rev57.html; 141,627 bytes; SHA-256 c0c05f91e1c4f9be3d987e27d76cf254b30003b6be41eb94977cc3fe148d4c4e"
+- id: unicode-normalization-crate-0.1.25
+  title: unicode-normalization
+  organization: unicode-rs contributors
+  kind: production-dependency
+  url: https://crates.io/crates/unicode-normalization/0.1.25
+  code: https://github.com/unicode-rs/unicode-normalization
+  authority: reference
+  integration: exact-crates.io-dependency
+  used_for:
+  - unicode-normalization-production-nfc
+  - unicode-normalization-production-nfkc
+  - unicode-normalization-conformance-nfd-nfkd
+  license: MIT OR Apache-2.0
+  revision: "0.1.25; crates.io checksum 5fd4f6878c9cb28d874b009da9e8d183b5abc80117c40bbd187a1fde336be6e8; upstream VCS commit 5a69b3bafb625caccdec7871a42bed0d9a6604d1; published 2025-10-30; unyanked; rust-version 1.36; generated UNICODE_VERSION (17, 0, 0); generator UCD target 17.0.0 and official NormalizationTest.txt input; sole direct transitive tinyvec 1.10.0 (checksum bfa5fdc3bce6191a1dbc8c02d5c8bffcf557bafa17c124c5264a458f1b0613fa, Zlib OR Apache-2.0 OR MIT) with tinyvec_macros 0.1.1 (checksum 1f3ccbac311fea05f86f61904b462b55fb3df8837a366dfc601a0161d0532f20, MIT OR Apache-2.0 OR Zlib)"
 - id: unicode-normalization-test-17.0.0
   title: NormalizationTest.txt
   organization: Unicode Consortium

@@ -27,13 +27,20 @@ embedded text-watermark status is **UNKNOWN**, not absent.
 - Limitations documented beside capabilities.
 - No universal AI-detection or watermark-removal claims.
 
-## Planned interface
+## Current interface
 
 ```console
 scrub inspect <path>
 scrub inspect <path> --json
-scrub doctor
 ```
+
+`scrub inspect` currently reports Unicode 17.0.0
+`Default_Ignorable_Code_Point`, `Bidi_Control`, NFC-difference, and
+NFKC-difference observations for one file. Normalization findings are neutral
+comparisons against the untouched input; they do not rewrite text or establish
+security risk, provenance, authorship, or watermark presence.
+
+`scrub doctor` and broader mechanism families remain planned.
 
 Watermark research lives separately in **WaterLARP** so experimental statistical
 results cannot silently become production forensic claims.

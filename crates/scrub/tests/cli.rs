@@ -91,7 +91,7 @@ fn json_stdout_contains_only_the_canonical_report() {
     assert_eq!(report.artifact().path(), artifact.path().to_string_lossy());
     assert_eq!(report.artifact().byte_length(), 3);
     assert_eq!(report.artifact().content_sha256().as_str(), ABC_SHA256);
-    assert_eq!(report.findings().len(), 2);
+    assert_eq!(report.findings().len(), 4);
     assert_eq!(
         report.findings()[0].mechanism().id(),
         "unicode.bidi_control"
@@ -126,7 +126,9 @@ fn json_stdout_contains_only_the_canonical_report() {
     );
     assert_eq!(report.limitations().len(), 1);
     assert!(report.limitations()[0].contains("not evaluated"));
-    assert!(report.limitations()[0].contains("Bidi_Control observations"));
+    assert!(report.limitations()[0].contains("Bidi_Control"));
+    assert!(report.limitations()[0].contains("NFC-difference"));
+    assert!(report.limitations()[0].contains("NFKC-difference"));
     assert!(!report.limitations()[0].contains("bidi-control"));
     assert!(report.assumptions().is_empty());
 }

@@ -91,6 +91,10 @@ impl Decoder {
         }
     }
 
+    pub(crate) const fn is_potentially_valid(&self) -> bool {
+        !self.invalid_utf8
+    }
+
     fn complete_incomplete<E>(
         &mut self,
         bytes: &[u8],

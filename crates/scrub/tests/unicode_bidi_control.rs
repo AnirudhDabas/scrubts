@@ -15,6 +15,8 @@ use unicode_bidi_control::{
 
 const BIDI_MECHANISM_ID: &str = "unicode.bidi_control";
 const DICP_MECHANISM_ID: &str = "unicode.default_ignorable_code_point";
+const NFC_MECHANISM_ID: &str = "unicode.normalization.nfc_difference";
+const NFKC_MECHANISM_ID: &str = "unicode.normalization.nfkc_difference";
 const UNICODE_VERSION: &str = "17.0.0";
 static NEXT_TEMP_ID: AtomicU64 = AtomicU64::new(0);
 
@@ -109,14 +111,19 @@ fn real_inspection_path_matches_all_35_frozen_fixtures() {
             "{} stdout is canonical",
             fixture.name
         );
-        assert_eq!(report.findings().len(), 2, "{} finding count", fixture.name);
+        assert_eq!(report.findings().len(), 4, "{} finding count", fixture.name);
         assert_eq!(
             report
                 .findings()
                 .iter()
                 .map(|finding| finding.mechanism().id())
                 .collect::<Vec<_>>(),
-            [BIDI_MECHANISM_ID, DICP_MECHANISM_ID],
+            [
+                BIDI_MECHANISM_ID,
+                DICP_MECHANISM_ID,
+                NFC_MECHANISM_ID,
+                NFKC_MECHANISM_ID,
+            ],
             "{} finding order",
             fixture.name
         );
@@ -286,7 +293,12 @@ fn actual_json_and_stderr_bytes_are_identical_across_eight_runs() {
             .iter()
             .map(|finding| finding.mechanism().id())
             .collect::<Vec<_>>(),
-        [BIDI_MECHANISM_ID, DICP_MECHANISM_ID]
+        [
+            BIDI_MECHANISM_ID,
+            DICP_MECHANISM_ID,
+            NFC_MECHANISM_ID,
+            NFKC_MECHANISM_ID,
+        ]
     );
     let bidi = finding(&report, BIDI_MECHANISM_ID);
     let ExpectedObservation::Valid(expected) = fixture.expected else {
