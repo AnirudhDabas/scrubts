@@ -20,7 +20,17 @@ use scrub_report::{
 const USAGE: &str = "Usage: scrub inspect <path> [--explain] [--json]";
 
 fn main() -> ExitCode {
-    let command = match parse_args(env::args_os().skip(1)) {
+    let arguments: Vec<_> = env::args_os().skip(1).collect();
+    if arguments.len() == 1 && arguments[0] == "--help" {
+        return write_identity_output(&format_args!(
+            "{USAGE}\n\nInspect one local artifact without network access."
+        ));
+    }
+    if arguments.len() == 1 && arguments[0] == "--version" {
+        return write_identity_output(&format_args!("scrub {}", env!("CARGO_PKG_VERSION")));
+    }
+
+    let command = match parse_args(arguments) {
         Ok(command) => command,
         Err(error) => {
             write_diagnostic(&format_args!("error: {error}\n{USAGE}"));
@@ -48,6 +58,16 @@ fn main() -> ExitCode {
         return ExitCode::from(1);
     }
 
+    ExitCode::SUCCESS
+}
+
+fn write_identity_output(arguments: &fmt::Arguments<'_>) -> ExitCode {
+    let stdout = io::stdout();
+    let mut stdout = stdout.lock();
+    if let Err(error) = writeln!(stdout, "{arguments}") {
+        write_diagnostic(&format_args!("error: {error}"));
+        return ExitCode::from(1);
+    }
     ExitCode::SUCCESS
 }
 

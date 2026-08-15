@@ -32,6 +32,28 @@ class ProofResultTests(unittest.TestCase):
         self.assertTrue(prove.in_proof_source_scope("crates/scrub/examples/determinism.rs"))
         self.assertFalse(prove.in_proof_source_scope("BENCHMARKS.md"))
 
+    def test_proof_scope_includes_release_bearing_sources_only(self) -> None:
+        for relative in (
+            ".github/workflows/release.yml",
+            "docs/RELEASE_INTEGRITY.md",
+            "docs/plans/0013-mega-c-release-integrity.md",
+            "docs/specs/mega-c-release-integrity.md",
+            "schemas/release-artifact-0.1.schema.json",
+            "schemas/release-manifest-0.1.schema.json",
+            "tools/release.py",
+            "tools/tests/test_release.py",
+        ):
+            with self.subTest(relative=relative):
+                self.assertTrue(prove.in_proof_source_scope(relative))
+        for relative in (
+            "dist/scrub-v0.1.0-x86_64-pc-windows-msvc.zip",
+            "target/release/scrub.exe",
+            "BENCHMARKS.md",
+            "docs/adr/0004-release-provenance.md",
+        ):
+            with self.subTest(relative=relative):
+                self.assertFalse(prove.in_proof_source_scope(relative))
+
     def test_zero_exit_is_the_only_path_to_pass(self) -> None:
         self.assertEqual(prove.make_gate_result(claim(), 0, "ok")["status"], "PASS")
         self.assertEqual(prove.make_gate_result(claim(), 1, "failed")["status"], "FAIL")

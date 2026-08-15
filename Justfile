@@ -8,6 +8,9 @@ check:
 prove:
     python tools/prove.py
 
+release-check:
+    waterlarp\.venv\Scripts\python.exe -m unittest tools.tests.test_release tools.tests.test_prove
+
 waterlarp-check:
     waterlarp\.venv\Scripts\python.exe -m ruff check --config waterlarp\pyproject.toml waterlarp\src waterlarp\tests
     waterlarp\.venv\Scripts\python.exe -m mypy --config-file waterlarp\pyproject.toml waterlarp\src

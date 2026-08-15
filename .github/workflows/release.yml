@@ -1,0 +1,321 @@
+name: release integrity
+
+on:
+  push:
+    tags:
+      - "v*"
+  workflow_dispatch:
+
+permissions:
+  contents: read
+
+concurrency:
+  group: release-integrity-${{ github.ref }}
+  cancel-in-progress: false
+
+env:
+  RUST_TOOLCHAIN: 1.97.1
+
+jobs:
+  validate-source:
+    runs-on: ubuntu-24.04
+    steps:
+      - name: Check out the workflow commit and tags
+        uses: actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1 # v7.0.1
+        with:
+          fetch-depth: 0
+          persist-credentials: false
+
+      - name: Validate package version, tag, and source commit
+        shell: bash
+        run: |
+          set -euo pipefail
+          test "$(git rev-parse HEAD)" = "$GITHUB_SHA"
+          test -z "$(git status --porcelain --untracked-files=no)"
+          if [[ "$GITHUB_EVENT_NAME" == "push" ]]; then
+            test "$GITHUB_REF_TYPE" = "tag"
+            git show-ref --verify --quiet "refs/tags/$GITHUB_REF_NAME"
+            test "$(git rev-list -n 1 "refs/tags/$GITHUB_REF_NAME")" = "$GITHUB_SHA"
+            python tools/release.py validate-version --tag "$GITHUB_REF_NAME"
+          elif [[ "$GITHUB_EVENT_NAME" == "workflow_dispatch" ]]; then
+            python tools/release.py validate-version --preflight
+          else
+            echo "unsupported release workflow event: $GITHUB_EVENT_NAME" >&2
+            exit 1
+          fi
+
+  preflight-build:
+    if: github.event_name == 'workflow_dispatch'
+    needs: validate-source
+    permissions:
+      contents: read
+    strategy:
+      fail-fast: false
+      matrix:
+        include:
+          - target: x86_64-pc-windows-msvc
+            runner: windows-2025
+            binary: target/x86_64-pc-windows-msvc/release/scrub.exe
+          - target: x86_64-unknown-linux-gnu
+            runner: ubuntu-24.04
+            binary: target/x86_64-unknown-linux-gnu/release/scrub
+          - target: aarch64-apple-darwin
+            runner: macos-15
+            binary: target/aarch64-apple-darwin/release/scrub
+          - target: x86_64-apple-darwin
+            runner: macos-15-intel
+            binary: target/x86_64-apple-darwin/release/scrub
+    runs-on: ${{ matrix.runner }}
+    steps:
+      - name: Check out exact source
+        uses: actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1 # v7.0.1
+        with:
+          persist-credentials: false
+
+      - name: Install pinned Rust toolchain and native target
+        shell: bash
+        run: |
+          set -euo pipefail
+          test -z "$(git status --porcelain)"
+          rustup toolchain install "$RUST_TOOLCHAIN" --profile minimal
+          rustup target add "${{ matrix.target }}" --toolchain "$RUST_TOOLCHAIN"
+
+      - name: Build and smoke native binary
+        shell: bash
+        run: |
+          set -euo pipefail
+          cargo +"$RUST_TOOLCHAIN" build --locked --release --target "${{ matrix.target }}" -p scrub
+          "${{ matrix.binary }}" --help >/dev/null
+          printf 'scrub native release smoke\n' > target/release-smoke.txt
+          "${{ matrix.binary }}" inspect target/release-smoke.txt --json > target/release-smoke.json
+
+      - name: Package and smoke extracted preflight archive
+        id: package
+        shell: bash
+        run: |
+          set -euo pipefail
+          archive_path="$(python tools/release.py package \
+            --binary "${{ matrix.binary }}" \
+            --target "${{ matrix.target }}" \
+            --source-commit "$GITHUB_SHA" \
+            --source-tree-state clean_commit \
+            --rustc-version "$(rustc +"$RUST_TOOLCHAIN" --version)" \
+            --cargo-version "$(cargo +"$RUST_TOOLCHAIN" --version)" \
+            --output-dir dist/packages \
+            --preflight)"
+          python tools/release.py verify-package \
+            --archive "$archive_path" \
+            --expected-target "${{ matrix.target }}" \
+            --source-commit "$GITHUB_SHA" \
+            --source-tree-state clean_commit \
+            --preflight \
+            --smoke
+          echo "archive_path=$archive_path" >> "$GITHUB_OUTPUT"
+
+      - name: Upload verified preflight archive
+        uses: actions/upload-artifact@043fb46d1a93c77aae656e7c1c64a875d1fc6a0a # v7.0.1
+        with:
+          name: release-package-${{ matrix.target }}
+          path: ${{ steps.package.outputs.archive_path }}
+          if-no-files-found: error
+          retention-days: 14
+
+  tag-build-and-attest:
+    if: github.event_name == 'push' && github.ref_type == 'tag'
+    needs: validate-source
+    permissions:
+      contents: read
+      id-token: write
+      attestations: write
+    strategy:
+      fail-fast: false
+      matrix:
+        include:
+          - target: x86_64-pc-windows-msvc
+            runner: windows-2025
+            binary: target/x86_64-pc-windows-msvc/release/scrub.exe
+          - target: x86_64-unknown-linux-gnu
+            runner: ubuntu-24.04
+            binary: target/x86_64-unknown-linux-gnu/release/scrub
+          - target: aarch64-apple-darwin
+            runner: macos-15
+            binary: target/aarch64-apple-darwin/release/scrub
+          - target: x86_64-apple-darwin
+            runner: macos-15-intel
+            binary: target/x86_64-apple-darwin/release/scrub
+    runs-on: ${{ matrix.runner }}
+    steps:
+      - name: Check out exact tagged source
+        uses: actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1 # v7.0.1
+        with:
+          fetch-depth: 0
+          persist-credentials: false
+
+      - name: Revalidate tag commit and package version
+        shell: bash
+        run: |
+          set -euo pipefail
+          test "$(git rev-parse HEAD)" = "$GITHUB_SHA"
+          test -z "$(git status --porcelain --untracked-files=no)"
+          test "$(git rev-list -n 1 "refs/tags/$GITHUB_REF_NAME")" = "$GITHUB_SHA"
+          python tools/release.py validate-version --tag "$GITHUB_REF_NAME"
+
+      - name: Install pinned Rust toolchain and native target
+        shell: bash
+        run: |
+          set -euo pipefail
+          rustup toolchain install "$RUST_TOOLCHAIN" --profile minimal
+          rustup target add "${{ matrix.target }}" --toolchain "$RUST_TOOLCHAIN"
+
+      - name: Build and smoke native binary
+        shell: bash
+        run: |
+          set -euo pipefail
+          cargo +"$RUST_TOOLCHAIN" build --locked --release --target "${{ matrix.target }}" -p scrub
+          "${{ matrix.binary }}" --help >/dev/null
+          printf 'scrub native release smoke\n' > target/release-smoke.txt
+          "${{ matrix.binary }}" inspect target/release-smoke.txt --json > target/release-smoke.json
+
+      - name: Package and smoke extracted tag archive
+        id: package
+        shell: bash
+        run: |
+          set -euo pipefail
+          archive_path="$(python tools/release.py package \
+            --binary "${{ matrix.binary }}" \
+            --target "${{ matrix.target }}" \
+            --source-commit "$GITHUB_SHA" \
+            --source-tree-state clean_commit \
+            --rustc-version "$(rustc +"$RUST_TOOLCHAIN" --version)" \
+            --cargo-version "$(cargo +"$RUST_TOOLCHAIN" --version)" \
+            --output-dir dist/packages \
+            --tag "$GITHUB_REF_NAME")"
+          python tools/release.py verify-package \
+            --archive "$archive_path" \
+            --expected-target "${{ matrix.target }}" \
+            --source-commit "$GITHUB_SHA" \
+            --source-tree-state clean_commit \
+            --tag "$GITHUB_REF_NAME" \
+            --smoke
+          echo "archive_path=$archive_path" >> "$GITHUB_OUTPUT"
+
+      - name: Attest exact downloadable archive
+        uses: actions/attest@1e69f48acb82d1966a394da916b4c1698aa569d6 # v4.2.2
+        with:
+          subject-path: ${{ steps.package.outputs.archive_path }}
+
+      - name: Upload verified and attested archive
+        uses: actions/upload-artifact@043fb46d1a93c77aae656e7c1c64a875d1fc6a0a # v7.0.1
+        with:
+          name: release-package-${{ matrix.target }}
+          path: ${{ steps.package.outputs.archive_path }}
+          if-no-files-found: error
+          retention-days: 14
+
+  assemble:
+    if: >-
+      always() &&
+      needs.validate-source.result == 'success' &&
+      ((github.event_name == 'workflow_dispatch' && needs.preflight-build.result == 'success') ||
+       (github.event_name == 'push' && needs.tag-build-and-attest.result == 'success'))
+    needs:
+      - validate-source
+      - preflight-build
+      - tag-build-and-attest
+    runs-on: ubuntu-24.04
+    permissions:
+      contents: read
+    steps:
+      - name: Check out assembler and schemas
+        uses: actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1 # v7.0.1
+        with:
+          persist-credentials: false
+
+      - name: Download all native archives
+        uses: actions/download-artifact@3e5f45b2cfb9172054b4087a40e8e0b5a5461e7c # v8.0.1
+        with:
+          pattern: release-package-*
+          path: dist/packages
+          merge-multiple: true
+
+      - name: Assemble exact release set and checksums
+        shell: bash
+        run: |
+          set -euo pipefail
+          if [[ "$GITHUB_EVENT_NAME" == "push" ]]; then
+            mode=(--tag "$GITHUB_REF_NAME")
+          else
+            mode=(--preflight)
+          fi
+          python tools/release.py assemble \
+            --input-dir dist/packages \
+            --output-dir dist/release \
+            --source-commit "$GITHUB_SHA" \
+            --source-tree-state clean_commit \
+            "${mode[@]}"
+          python tools/release.py verify-release \
+            --release-dir dist/release \
+            --archive-dir dist/packages
+
+      - name: Upload complete release candidate
+        uses: actions/upload-artifact@043fb46d1a93c77aae656e7c1c64a875d1fc6a0a # v7.0.1
+        with:
+          name: assembled-release-${{ github.sha }}
+          path: |
+            dist/packages/*
+            dist/release/release-manifest.json
+            dist/release/SHA256SUMS
+          if-no-files-found: error
+          retention-days: 14
+
+  create-draft-release:
+    if: github.event_name == 'push' && github.ref_type == 'tag'
+    needs: assemble
+    runs-on: ubuntu-24.04
+    permissions:
+      contents: write
+    steps:
+      - name: Download complete release candidate
+        uses: actions/download-artifact@3e5f45b2cfb9172054b4087a40e8e0b5a5461e7c # v8.0.1
+        with:
+          name: assembled-release-${{ github.sha }}
+          path: dist
+
+      - name: Verify remote tag still addresses this workflow commit
+        env:
+          GH_TOKEN: ${{ github.token }}
+        shell: bash
+        run: |
+          set -euo pipefail
+          test "$(gh api "repos/$GITHUB_REPOSITORY/commits/$GITHUB_REF_NAME" --jq .sha)" = "$GITHUB_SHA"
+
+      - name: Create or update one draft release and stop
+        env:
+          GH_TOKEN: ${{ github.token }}
+        shell: bash
+        run: |
+          set -euo pipefail
+          mapfile -t archives < <(find dist/packages -maxdepth 1 -type f \( -name '*.zip' -o -name '*.tar.gz' \) -print | sort)
+          test "${#archives[@]}" -eq 4
+          assets=("${archives[@]}" dist/release/release-manifest.json dist/release/SHA256SUMS)
+          mapfile -t expected_names < <(printf '%s\n' "${assets[@]##*/}" | sort)
+
+          if gh release view "$GITHUB_REF_NAME" >/dev/null 2>&1; then
+            test "$(gh release view "$GITHUB_REF_NAME" --json isDraft --jq .isDraft)" = "true"
+            mapfile -t actual_names < <(gh release view "$GITHUB_REF_NAME" --json assets --jq '.assets[].name' | sort)
+            unexpected="$(comm -13 <(printf '%s\n' "${expected_names[@]}") <(printf '%s\n' "${actual_names[@]}"))"
+            test -z "$unexpected" || { echo "draft has unexpected assets: $unexpected" >&2; exit 1; }
+            gh release upload "$GITHUB_REF_NAME" "${assets[@]}" --clobber
+          else
+            gh release create "$GITHUB_REF_NAME" "${assets[@]}" \
+              --draft \
+              --verify-tag \
+              --target "$GITHUB_SHA" \
+              --title "scrub $GITHUB_REF_NAME" \
+              --notes "Automated release-integrity assembly completed. Human inspection and publication are required."
+          fi
+
+          test "$(gh release view "$GITHUB_REF_NAME" --json isDraft --jq .isDraft)" = "true"
+          mapfile -t final_names < <(gh release view "$GITHUB_REF_NAME" --json assets --jq '.assets[].name' | sort)
+          test "$(printf '%s\n' "${expected_names[@]}")" = "$(printf '%s\n' "${final_names[@]}")"
+          echo "Draft release assembled. Automation intentionally stops before publication."

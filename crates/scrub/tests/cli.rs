@@ -54,6 +54,23 @@ fn stderr(output: &Output) -> &str {
     std::str::from_utf8(&output.stderr).expect("stderr is UTF-8")
 }
 
+#[test]
+fn help_and_version_are_successful_machine_stable_identity_commands() {
+    let help = run(&["--help"]);
+    assert!(help.status.success());
+    assert_eq!(stderr(&help), "");
+    assert_eq!(
+        stdout(&help),
+        "Usage: scrub inspect <path> [--explain] [--json]\n\n\
+         Inspect one local artifact without network access.\n"
+    );
+
+    let version = run(&["--version"]);
+    assert!(version.status.success());
+    assert_eq!(stderr(&version), "");
+    assert_eq!(stdout(&version), "scrub 0.1.0\n");
+}
+
 fn inspect_json(artifact: &TempArtifact) -> Report {
     let output = Command::new(env!("CARGO_BIN_EXE_scrub"))
         .arg("inspect")

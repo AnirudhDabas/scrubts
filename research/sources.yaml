@@ -912,8 +912,73 @@ sources:
   url: https://docs.github.com/en/actions/how-tos/secure-your-work/use-artifact-attestations/use-artifact-attestations
   authority: primary
   integration: release-process
+  revision: GitHub Docs 81ade08c26f13325c0cde8a23cd3bfb85bd0778e; actions/attest v4.2.2 commit 1e69f48acb82d1966a394da916b4c1698aa569d6
+  retrieved: 2026-08-15
   used_for:
   - build-provenance
+  - exact downloadable archive subject
+  limitations:
+  - Artifact attestations are distinct from immutable release membership, human identity, compiler-output reproducibility, Apple Developer ID/notarization, and Windows Authenticode.
+- id: github-immutable-releases
+  title: GitHub immutable releases and release-integrity verification
+  organization: GitHub
+  kind: release-integrity
+  url: https://docs.github.com/en/code-security/concepts/supply-chain-security/immutable-releases
+  authority: primary
+  integration: release-process
+  revision: GitHub Docs 81ade08c26f13325c0cde8a23cd3bfb85bd0778e; immutable-releases source blob eb2aabfe5b98d52300fdecf428baf6022a2b377a; verify-release-integrity source blob 9d21016481412173927522619c2c40b6dda4aa72
+  retrieved: 2026-08-15
+  used_for:
+  - draft-then-human-publish contract
+  - immutable tag and asset membership
+  - release and release-asset verification commands
+  limitations:
+  - Immutability applies only after publication and only when the repository setting is enabled; workflow source and drafts do not establish it.
+- id: github-cli-release-verification
+  title: GitHub CLI release and attestation commands
+  organization: GitHub
+  kind: release-tooling
+  url: https://cli.github.com/manual/
+  authority: primary
+  integration: release-process
+  revision: GitHub CLI v2.97.0 commit 55dbb4dc6b7edb10b48e3d7fc5bccd32318d1b55; online manual last modified 2026-07-31
+  retrieved: 2026-08-15
+  used_for:
+  - gh release create --draft --verify-tag
+  - gh release verify and verify-asset
+  - gh attestation verify
+- id: github-hosted-runner-labels
+  title: GitHub-hosted runners reference
+  organization: GitHub
+  kind: release-build-infrastructure
+  url: https://docs.github.com/en/actions/reference/runners/github-hosted-runners
+  authority: primary
+  integration: release-process
+  revision: GitHub Docs 81ade08c26f13325c0cde8a23cd3bfb85bd0778e; actions/runner-images 739226172a10f2b5797297e716debc858698f73e
+  retrieved: 2026-08-15
+  used_for:
+  - windows-2025
+  - ubuntu-24.04
+  - macos-15
+  - macos-15-intel
+  limitations:
+  - Runner labels identify hosted image families; the actual workflow run records the concrete image used.
+- id: rust-1.97.1-platform-support
+  title: Rust 1.97.1 toolchain and platform support
+  organization: Rust Project
+  kind: release-build-infrastructure
+  url: https://doc.rust-lang.org/rustc/platform-support.html
+  authority: primary
+  integration: release-process
+  revision: Rust 1.97.1 commit 8bab26f4f68e0e26f0bb7960be334d5b520ea452; Cargo 1.97.1 commit c980f4866141969fab6254a680546a277789d6f0
+  retrieved: 2026-08-15
+  used_for:
+  - x86_64-pc-windows-msvc
+  - x86_64-unknown-linux-gnu
+  - aarch64-apple-darwin
+  - x86_64-apple-darwin
+  limitations:
+  - Target support documentation does not establish scrub runtime compatibility beyond the actual native build and smoke runner.
   license: documentation-terms
 - id: github-commit-signing
   title: GitHub commit signature verification

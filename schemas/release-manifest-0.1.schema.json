@@ -1,0 +1,122 @@
+{
+  "$schema": "https://json-schema.org/draft/2020-12/schema",
+  "$id": "https://scrubts.dev/schemas/release-manifest-0.1.schema.json",
+  "title": "scrub aggregate release manifest 0.1",
+  "type": "object",
+  "additionalProperties": false,
+  "required": [
+    "schema_version",
+    "release_mode",
+    "package_name",
+    "package_version",
+    "release_tag",
+    "source_commit",
+    "source_tree_state",
+    "expected_targets",
+    "artifacts"
+  ],
+  "properties": {
+    "schema_version": { "const": "0.1" },
+    "release_mode": { "enum": ["preflight", "tag"] },
+    "package_name": { "const": "scrub" },
+    "package_version": {
+      "type": "string",
+      "pattern": "^(0|[1-9][0-9]*)\\.(0|[1-9][0-9]*)\\.(0|[1-9][0-9]*)(?:-[0-9A-Za-z-]+(?:\\.[0-9A-Za-z-]+)*)?(?:\\+[0-9A-Za-z-]+(?:\\.[0-9A-Za-z-]+)*)?$"
+    },
+    "release_tag": {
+      "type": ["string", "null"],
+      "pattern": "^v(0|[1-9][0-9]*)\\.(0|[1-9][0-9]*)\\.(0|[1-9][0-9]*)(?:-[0-9A-Za-z-]+(?:\\.[0-9A-Za-z-]+)*)?(?:\\+[0-9A-Za-z-]+(?:\\.[0-9A-Za-z-]+)*)?$"
+    },
+    "source_commit": { "type": "string", "pattern": "^[0-9a-f]{40}$" },
+    "source_tree_state": { "enum": ["clean_commit", "dirty_worktree"] },
+    "expected_targets": {
+      "type": "array",
+      "minItems": 4,
+      "maxItems": 4,
+      "prefixItems": [
+        { "const": "x86_64-pc-windows-msvc" },
+        { "const": "x86_64-unknown-linux-gnu" },
+        { "const": "aarch64-apple-darwin" },
+        { "const": "x86_64-apple-darwin" }
+      ],
+      "items": false
+    },
+    "artifacts": {
+      "type": "array",
+      "minItems": 4,
+      "maxItems": 4,
+      "prefixItems": [
+        { "$ref": "#/$defs/windows_artifact" },
+        { "$ref": "#/$defs/linux_artifact" },
+        { "$ref": "#/$defs/macos_arm_artifact" },
+        { "$ref": "#/$defs/macos_intel_artifact" }
+      ],
+      "items": false
+    }
+  },
+  "allOf": [
+    {
+      "if": { "properties": { "release_mode": { "const": "tag" } }, "required": ["release_mode"] },
+      "then": {
+        "properties": {
+          "release_tag": { "type": "string" },
+          "source_tree_state": { "const": "clean_commit" }
+        }
+      },
+      "else": { "properties": { "release_tag": { "type": "null" } } }
+    }
+  ],
+  "$defs": {
+    "artifact": {
+      "type": "object",
+      "additionalProperties": false,
+      "required": [
+        "archive_filename",
+        "archive_sha256",
+        "rust_target",
+        "binary_sha256",
+        "release_metadata_sha256",
+        "packaging_schema_version"
+      ],
+      "properties": {
+        "archive_filename": { "type": "string", "pattern": "^scrub-v[^/\\\\]+-(?:x86_64-pc-windows-msvc|x86_64-unknown-linux-gnu|aarch64-apple-darwin|x86_64-apple-darwin)\\.(?:zip|tar\\.gz)$" },
+        "archive_sha256": { "type": "string", "pattern": "^[0-9a-f]{64}$" },
+        "rust_target": {
+          "enum": [
+            "x86_64-pc-windows-msvc",
+            "x86_64-unknown-linux-gnu",
+            "aarch64-apple-darwin",
+            "x86_64-apple-darwin"
+          ]
+        },
+        "binary_sha256": { "type": "string", "pattern": "^[0-9a-f]{64}$" },
+        "release_metadata_sha256": { "type": "string", "pattern": "^[0-9a-f]{64}$" },
+        "packaging_schema_version": { "const": "0.1" }
+      }
+    },
+    "windows_artifact": {
+      "allOf": [
+        { "$ref": "#/$defs/artifact" },
+        { "properties": { "rust_target": { "const": "x86_64-pc-windows-msvc" } } }
+      ]
+    },
+    "linux_artifact": {
+      "allOf": [
+        { "$ref": "#/$defs/artifact" },
+        { "properties": { "rust_target": { "const": "x86_64-unknown-linux-gnu" } } }
+      ]
+    },
+    "macos_arm_artifact": {
+      "allOf": [
+        { "$ref": "#/$defs/artifact" },
+        { "properties": { "rust_target": { "const": "aarch64-apple-darwin" } } }
+      ]
+    },
+    "macos_intel_artifact": {
+      "allOf": [
+        { "$ref": "#/$defs/artifact" },
+        { "properties": { "rust_target": { "const": "x86_64-apple-darwin" } } }
+      ]
+    }
+  }
+}

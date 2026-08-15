@@ -1,0 +1,91 @@
+{
+  "$schema": "https://json-schema.org/draft/2020-12/schema",
+  "$id": "https://scrubts.dev/schemas/release-artifact-0.1.schema.json",
+  "title": "scrub release artifact metadata 0.1",
+  "type": "object",
+  "additionalProperties": false,
+  "required": [
+    "schema_version",
+    "release_mode",
+    "release_tag",
+    "package_name",
+    "package_version",
+    "source_commit",
+    "source_tree_state",
+    "rust_target",
+    "binary_filename",
+    "binary_sha256",
+    "cargo_lock_sha256",
+    "rustc_version",
+    "cargo_version",
+    "release_profile",
+    "platform_vendor_signing",
+    "limitations"
+  ],
+  "properties": {
+    "schema_version": { "const": "0.1" },
+    "release_mode": { "enum": ["preflight", "tag"] },
+    "release_tag": {
+      "type": ["string", "null"],
+      "pattern": "^v(0|[1-9][0-9]*)\\.(0|[1-9][0-9]*)\\.(0|[1-9][0-9]*)(?:-[0-9A-Za-z-]+(?:\\.[0-9A-Za-z-]+)*)?(?:\\+[0-9A-Za-z-]+(?:\\.[0-9A-Za-z-]+)*)?$"
+    },
+    "package_name": { "const": "scrub" },
+    "package_version": {
+      "type": "string",
+      "pattern": "^(0|[1-9][0-9]*)\\.(0|[1-9][0-9]*)\\.(0|[1-9][0-9]*)(?:-[0-9A-Za-z-]+(?:\\.[0-9A-Za-z-]+)*)?(?:\\+[0-9A-Za-z-]+(?:\\.[0-9A-Za-z-]+)*)?$"
+    },
+    "source_commit": { "type": "string", "pattern": "^[0-9a-f]{40}$" },
+    "source_tree_state": { "enum": ["clean_commit", "dirty_worktree"] },
+    "rust_target": {
+      "enum": [
+        "x86_64-pc-windows-msvc",
+        "x86_64-unknown-linux-gnu",
+        "aarch64-apple-darwin",
+        "x86_64-apple-darwin"
+      ]
+    },
+    "binary_filename": { "enum": ["scrub", "scrub.exe"] },
+    "binary_sha256": { "type": "string", "pattern": "^[0-9a-f]{64}$" },
+    "cargo_lock_sha256": { "type": "string", "pattern": "^[0-9a-f]{64}$" },
+    "rustc_version": { "type": "string", "pattern": "^rustc 1\\.97\\.1 \\([^)]+\\)$" },
+    "cargo_version": { "type": "string", "pattern": "^cargo 1\\.97\\.1 \\([^)]+\\)$" },
+    "release_profile": { "const": "cargo --locked --release" },
+    "platform_vendor_signing": {
+      "type": "object",
+      "additionalProperties": false,
+      "required": ["apple_developer_id", "apple_notarization", "windows_authenticode"],
+      "properties": {
+        "apple_developer_id": { "const": "not_provided" },
+        "apple_notarization": { "const": "not_provided" },
+        "windows_authenticode": { "const": "not_provided" }
+      }
+    },
+    "limitations": {
+      "type": "array",
+      "minItems": 2,
+      "maxItems": 2,
+      "prefixItems": [
+        { "const": "Deterministic archive construction does not establish bit-for-bit reproducible compiler output." },
+        { "const": "GitHub artifact attestations do not provide Apple Developer ID, Apple notarization, or Windows Authenticode signing." }
+      ],
+      "items": false
+    }
+  },
+  "allOf": [
+    {
+      "if": { "properties": { "release_mode": { "const": "tag" } }, "required": ["release_mode"] },
+      "then": {
+        "properties": {
+          "release_tag": { "type": "string" },
+          "source_tree_state": { "const": "clean_commit" }
+        }
+      },
+      "else": { "properties": { "release_tag": { "type": "null" } } }
+    },
+    {
+      "if": { "properties": { "rust_target": { "const": "x86_64-pc-windows-msvc" } }, "required": ["rust_target"] },
+      "then": { "properties": { "binary_filename": { "const": "scrub.exe" } } },
+      "else": { "properties": { "binary_filename": { "const": "scrub" } } }
+    }
+  ]
+}
