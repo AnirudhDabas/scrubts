@@ -129,6 +129,35 @@ def sha256_file(path: Path) -> str:
     return hasher.hexdigest()
 
 
+def committed_cargo_lock_bytes(source_commit: str, root: Path = ROOT) -> bytes:
+    try:
+        completed = subprocess.run(
+            ["git", "cat-file", "blob", f"{source_commit}:Cargo.lock"],
+            cwd=root,
+            check=True,
+            stdout=subprocess.PIPE,
+            stderr=subprocess.PIPE,
+        )
+    except (OSError, subprocess.CalledProcessError) as error:
+        raise ReleaseError(
+            f"cannot read Cargo.lock from source commit {source_commit}"
+        ) from error
+    return completed.stdout
+
+
+def ensure_clean_commit_lock_identity(
+    source_commit: str, source_tree_state: str, root: Path = ROOT
+) -> bytes:
+    working_lock = (root / "Cargo.lock").read_bytes()
+    if source_tree_state == "clean_commit":
+        committed_lock = committed_cargo_lock_bytes(source_commit, root)
+        if working_lock != committed_lock:
+            raise ReleaseError(
+                "clean-commit Cargo.lock bytes disagree with the source commit blob"
+            )
+    return working_lock
+
+
 def json_bytes(document: dict[str, Any]) -> bytes:
     return (json.dumps(document, ensure_ascii=False, indent=2, sort_keys=True) + "\n").encode(
         "utf-8"
@@ -295,6 +324,9 @@ def build_metadata(
         raise ReleaseError(f"release binary does not exist: {binary}")
     validate_commit(source_commit)
     version = validate_version_contract(tag, root)
+    cargo_lock_bytes = ensure_clean_commit_lock_identity(
+        source_commit, source_tree_state, root
+    )
     binary_name, _extension = TARGET_CONFIG[target]
     document = {
         "schema_version": SCHEMA_VERSION,
@@ -307,7 +339,7 @@ def build_metadata(
         "rust_target": target,
         "binary_filename": binary_name,
         "binary_sha256": sha256_file(binary),
-        "cargo_lock_sha256": sha256_file(root / "Cargo.lock"),
+        "cargo_lock_sha256": sha256_bytes(cargo_lock_bytes),
         "rustc_version": rustc_version,
         "cargo_version": cargo_version,
         "release_profile": "cargo --locked --release",

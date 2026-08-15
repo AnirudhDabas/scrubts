@@ -180,7 +180,14 @@ the exact release directories. Focused regressions reproduce each accepted
 case. These changes do not alter tag/source architecture, release targets,
 attestation, publication, signing, claim, WaterLARP, or Mega A/B semantics.
 
-Linux x64, macOS Apple Silicon, macOS Intel, GitHub artifact attestations, the
-draft release, the release attestation, repository immutability configuration,
-human publication, and immutable public release membership remain **NOT YET
-ESTABLISHED** pending future GitHub execution and operator action.
+GitHub artifact attestations, the draft release, the release attestation,
+repository immutability configuration, human publication, and immutable public
+release membership remain **NOT YET ESTABLISHED** pending future tag-mode
+GitHub execution and operator action.
+
+External preflight run `31888740599` established native package build and smoke
+on all four targets, then correctly rejected assembly because the Windows
+checkout had converted the committed root `Cargo.lock` from LF to CRLF. The
+checkout contract now marks only `/Cargo.lock` as `-text`, and clean-commit
+metadata construction requires the working lock bytes to equal the exact lock
+blob at `source_commit`. Dirty-worktree metadata retains its existing semantics.

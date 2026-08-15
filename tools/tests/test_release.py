@@ -8,6 +8,7 @@ import json
 from pathlib import Path
 import re
 import stat
+import subprocess
 import sys
 import tarfile
 import tempfile
@@ -39,31 +40,41 @@ class ReleaseContractTests(unittest.TestCase):
         self.temporary.cleanup()
 
     def metadata(self, target: str = release.TARGETS[0]) -> dict[str, object]:
-        return release.build_metadata(
-            binary=self.binary,
-            target=target,
-            source_commit=SOURCE_COMMIT,
-            source_tree_state="clean_commit",
-            rustc_version=RUSTC_VERSION,
-            cargo_version=CARGO_VERSION,
-            tag=None,
-        )
+        with mock.patch.object(
+            release,
+            "committed_cargo_lock_bytes",
+            return_value=(ROOT / "Cargo.lock").read_bytes(),
+        ):
+            return release.build_metadata(
+                binary=self.binary,
+                target=target,
+                source_commit=SOURCE_COMMIT,
+                source_tree_state="clean_commit",
+                rustc_version=RUSTC_VERSION,
+                cargo_version=CARGO_VERSION,
+                tag=None,
+            )
 
     def package(self, target: str, output: Path | None = None) -> Path:
         if output is None:
             output = self.directory / "packages"
         binary = self.directory / ("scrub.exe" if target.endswith("windows-msvc") else "scrub")
         binary.write_bytes((target + "\n").encode("ascii"))
-        return release.package_archive(
-            binary=binary,
-            target=target,
-            source_commit=SOURCE_COMMIT,
-            source_tree_state="clean_commit",
-            rustc_version=RUSTC_VERSION,
-            cargo_version=CARGO_VERSION,
-            tag=None,
-            output_dir=output,
-        )
+        with mock.patch.object(
+            release,
+            "committed_cargo_lock_bytes",
+            return_value=(ROOT / "Cargo.lock").read_bytes(),
+        ):
+            return release.package_archive(
+                binary=binary,
+                target=target,
+                source_commit=SOURCE_COMMIT,
+                source_tree_state="clean_commit",
+                rustc_version=RUSTC_VERSION,
+                cargo_version=CARGO_VERSION,
+                tag=None,
+                output_dir=output,
+            )
 
     def write_zip_variant(
         self,
@@ -127,6 +138,36 @@ class ReleaseContractTests(unittest.TestCase):
                 release.ReleaseError, "malformed"
             ):
                 release.validate_version_contract(malformed)
+
+    def test_root_cargo_lock_is_not_a_git_text_path(self) -> None:
+        completed = subprocess.run(
+            ["git", "check-attr", "text", "--", "Cargo.lock"],
+            cwd=ROOT,
+            check=True,
+            stdout=subprocess.PIPE,
+            stderr=subprocess.PIPE,
+            text=True,
+            encoding="utf-8",
+        )
+        self.assertEqual(completed.stdout.strip(), "Cargo.lock: text: unset")
+
+    def test_clean_commit_requires_exact_cargo_lock_blob_bytes(self) -> None:
+        root = self.directory / "source"
+        root.mkdir()
+        lock = root / "Cargo.lock"
+        committed = b"version = 4\n"
+
+        with mock.patch.object(
+            release, "committed_cargo_lock_bytes", return_value=committed
+        ):
+            lock.write_bytes(committed)
+            release.ensure_clean_commit_lock_identity(SOURCE_COMMIT, "clean_commit", root)
+
+            lock.write_bytes(committed.replace(b"\n", b"\r\n"))
+            with self.assertRaisesRegex(release.ReleaseError, "Cargo.lock bytes disagree"):
+                release.ensure_clean_commit_lock_identity(
+                    SOURCE_COMMIT, "clean_commit", root
+                )
 
     def test_unknown_metadata_field_is_rejected(self) -> None:
         metadata = self.metadata()
