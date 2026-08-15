@@ -18,16 +18,41 @@ use scrub_report::{
 };
 
 const USAGE: &str = "Usage: scrub inspect <path> [--explain] [--json]";
+const ROOT_HELP: &str = concat!(
+    "Usage:\n",
+    "  scrub inspect <path>\n",
+    "  scrub inspect <path> --explain\n",
+    "  scrub inspect <path> --json\n",
+    "\n",
+    "Command:\n",
+    "  inspect  Inspect one local artifact without network access\n",
+    "\n",
+    "Global options:\n",
+    "  --help     Show this help\n",
+    "  --version  Show package version",
+);
+const INSPECT_HELP: &str = concat!(
+    "Usage:\n",
+    "  scrub inspect <path>\n",
+    "  scrub inspect <path> --explain\n",
+    "  scrub inspect <path> --json\n",
+    "\n",
+    "Options:\n",
+    "  --explain  Show complete evidence and authority chain in human output\n",
+    "  --json     Emit the report as JSON on stdout\n",
+    "  --help     Show this help",
+);
 
 fn main() -> ExitCode {
     let arguments: Vec<_> = env::args_os().skip(1).collect();
     if arguments.len() == 1 && arguments[0] == "--help" {
-        return write_identity_output(&format_args!(
-            "{USAGE}\n\nInspect one local artifact without network access."
-        ));
+        return write_identity_output(&format_args!("{ROOT_HELP}"));
     }
     if arguments.len() == 1 && arguments[0] == "--version" {
         return write_identity_output(&format_args!("scrub {}", env!("CARGO_PKG_VERSION")));
+    }
+    if arguments.len() == 2 && arguments[0] == "inspect" && arguments[1] == "--help" {
+        return write_identity_output(&format_args!("{INSPECT_HELP}"));
     }
 
     let command = match parse_args(arguments) {

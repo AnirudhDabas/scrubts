@@ -55,20 +55,68 @@ fn stderr(output: &Output) -> &str {
 }
 
 #[test]
-fn help_and_version_are_successful_machine_stable_identity_commands() {
+fn root_help_is_successful_and_lists_only_the_existing_surface() {
     let help = run(&["--help"]);
     assert!(help.status.success());
     assert_eq!(stderr(&help), "");
     assert_eq!(
         stdout(&help),
-        "Usage: scrub inspect <path> [--explain] [--json]\n\n\
-         Inspect one local artifact without network access.\n"
+        concat!(
+            "Usage:\n",
+            "  scrub inspect <path>\n",
+            "  scrub inspect <path> --explain\n",
+            "  scrub inspect <path> --json\n",
+            "\n",
+            "Command:\n",
+            "  inspect  Inspect one local artifact without network access\n",
+            "\n",
+            "Global options:\n",
+            "  --help     Show this help\n",
+            "  --version  Show package version\n",
+        )
     );
+}
 
+#[test]
+fn inspect_help_is_successful_and_describes_real_options() {
+    let help = run(&["inspect", "--help"]);
+    assert!(help.status.success());
+    assert_eq!(stderr(&help), "");
+    assert_eq!(
+        stdout(&help),
+        concat!(
+            "Usage:\n",
+            "  scrub inspect <path>\n",
+            "  scrub inspect <path> --explain\n",
+            "  scrub inspect <path> --json\n",
+            "\n",
+            "Options:\n",
+            "  --explain  Show complete evidence and authority chain in human output\n",
+            "  --json     Emit the report as JSON on stdout\n",
+            "  --help     Show this help\n",
+        )
+    );
+}
+
+#[test]
+fn version_is_successful_and_comes_from_the_package_version() {
     let version = run(&["--version"]);
     assert!(version.status.success());
     assert_eq!(stderr(&version), "");
-    assert_eq!(stdout(&version), "scrub 0.1.0\n");
+    assert_eq!(
+        stdout(&version),
+        format!("scrub {}\n", env!("CARGO_PKG_VERSION"))
+    );
+}
+
+#[test]
+fn help_with_extra_arguments_remains_a_usage_error() {
+    let output = run(&["inspect", "--help", "artifact.txt"]);
+
+    assert_eq!(output.status.code(), Some(2));
+    assert_eq!(stdout(&output), "");
+    assert!(stderr(&output).contains("unknown option: --help"));
+    assert!(stderr(&output).contains("Usage:"));
 }
 
 fn inspect_json(artifact: &TempArtifact) -> Report {
