@@ -84,7 +84,8 @@ impl Inspection {
                 )],
                 vec![INVALID_UTF8_LIMITATION.to_owned()],
                 vec![],
-            );
+            )
+            .expect("frozen Unicode mechanism/status pair is valid");
         }
 
         let status = if total_occurrence_count == 0 {
@@ -105,6 +106,7 @@ impl Inspection {
             vec![VALID_INTERPRETATION_LIMITATION.to_owned()],
             vec![],
         )
+        .expect("frozen Unicode mechanism/status pair is valid")
     }
 }
 

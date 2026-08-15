@@ -3,7 +3,7 @@ use std::path::{Path, PathBuf};
 use std::process::{Command, Output};
 use std::sync::atomic::{AtomicU64, Ordering};
 
-use scrub_report::{Evidence, FindingStatus, Report};
+use scrub_report::{Evidence, FindingStatus, InferenceId, Report, VerifierAvailability};
 
 const ABC_SHA256: &str = "ba7816bf8f01cfea414140de5dae2223b00361a396177a9cb410ff61f20015ad";
 const EMPTY_SHA256: &str = "e3b0c44298fc1c149afbf4c8996fb92427ae41e4649b934ca495991b7852b855";
@@ -64,7 +64,9 @@ fn inspect_json(artifact: &TempArtifact) -> Report {
 
     assert!(output.status.success(), "stderr: {}", stderr(&output));
     assert_eq!(stderr(&output), "");
-    Report::from_json(stdout(&output).trim_end()).expect("stdout is a report")
+    Report::from_json(stdout(&output).trim_end())
+        .expect("stdout is an untrusted report")
+        .into_report()
 }
 
 #[test]
@@ -84,14 +86,16 @@ fn json_stdout_contains_only_the_canonical_report() {
         .expect("JSON output has one trailing newline");
     assert!(!json.contains('\n'), "JSON report must occupy one line");
 
-    let report = Report::from_json(json).expect("stdout is a report");
-    assert_eq!(report.schema_version(), "0.1");
+    let report = Report::from_json(json)
+        .expect("stdout is an untrusted report")
+        .into_report();
+    assert_eq!(report.schema_version(), "0.2");
     assert_eq!(report.tool().name(), "scrub");
     assert_eq!(report.tool().version(), "0.1.0");
-    assert_eq!(report.artifact().path(), artifact.path().to_string_lossy());
+    assert_eq!(report.artifact().path(), "artifact.txt");
     assert_eq!(report.artifact().byte_length(), 3);
     assert_eq!(report.artifact().content_sha256().as_str(), ABC_SHA256);
-    assert_eq!(report.findings().len(), 9);
+    assert_eq!(report.findings().len(), 10);
     assert_eq!(
         report.findings()[0].mechanism().id(),
         "unicode.bidi_control"
@@ -126,10 +130,9 @@ fn json_stdout_contains_only_the_canonical_report() {
     );
     assert_eq!(report.limitations().len(), 1);
     assert!(report.limitations()[0].contains("not evaluated"));
-    assert!(report.limitations()[0].contains("Bidi_Control"));
-    assert!(report.limitations()[0].contains("NFC-difference"));
-    assert!(report.limitations()[0].contains("NFKC-difference"));
-    assert!(!report.limitations()[0].contains("bidi-control"));
+    assert!(report.limitations()[0].contains("listed Unicode and C2PA"));
+    assert!(report.limitations()[0].contains("provider-detector availability"));
+    assert!(report.limitations()[0].contains("public-reference statistical detectors"));
     assert!(report.assumptions().is_empty());
 }
 
@@ -145,7 +148,9 @@ fn json_reports_dicp_presence_without_changing_success_exit_semantics() {
 
     assert!(output.status.success(), "stderr: {}", stderr(&output));
     assert_eq!(stderr(&output), "");
-    let report = Report::from_json(stdout(&output).trim_end()).expect("stdout is a report");
+    let report = Report::from_json(stdout(&output).trim_end())
+        .expect("stdout is an untrusted report")
+        .into_report();
     let finding = report
         .findings()
         .iter()
@@ -196,11 +201,10 @@ fn default_output_is_human_readable_and_neutral() {
 
     assert!(output.status.success(), "stderr: {}", stderr(&output));
     assert_eq!(stderr(&output), "");
-    assert!(stdout(&output).contains("mechanism: Default_Ignorable_Code_Point (Unicode 17.0.0)"));
-    assert!(stdout(&output).contains("mechanism: Bidi_Control (Unicode 17.0.0)"));
-    assert!(stdout(&output).contains("status: present"));
+    assert!(stdout(&output).contains("PRESENT      Default_Ignorable_Code_Point"));
     assert!(stdout(&output).contains("\"code_point\":\"U+200B\""));
-    assert!(stdout(&output).contains("limitation:"));
+    assert!(stdout(&output).contains("Claude   UNKNOWN"));
+    assert!(stdout(&output).contains("Use --explain"));
 
     let normalized = stdout(&output).to_ascii_lowercase();
     for prohibited in [
@@ -209,7 +213,6 @@ fn default_output_is_human_readable_and_neutral() {
         "ai-generated",
         "watermark detected",
         "watermark removed",
-        "clean",
         "safe",
     ] {
         assert!(
@@ -230,7 +233,7 @@ fn human_output_reports_bidi_identity_without_rendering_the_control() {
 
     assert!(output.status.success(), "stderr: {}", stderr(&output));
     assert_eq!(stderr(&output), "");
-    assert!(stdout(&output).contains("mechanism: Bidi_Control (Unicode 17.0.0)"));
+    assert!(stdout(&output).contains("PRESENT      Bidi_Control"));
     assert!(stdout(&output).contains("\"code_point\":\"U+202E\""));
     assert!(stdout(&output).contains("\"abbreviation\":\"RLO\""));
     assert!(stdout(&output).contains("\"byte_offset\":1"));
@@ -290,4 +293,115 @@ fn directory_is_rejected_as_not_a_regular_file() {
     assert_eq!(output.status.code(), Some(1));
     assert_eq!(stdout(&output), "");
     assert!(stderr(&output).contains("not a regular file"));
+}
+
+#[test]
+fn explain_projects_the_typed_provider_authority_boundary() {
+    let artifact = TempArtifact::new(b"ordinary text");
+    let output = Command::new(env!("CARGO_BIN_EXE_scrub"))
+        .arg("inspect")
+        .arg(artifact.path())
+        .arg("--explain")
+        .output()
+        .expect("scrub process can run");
+    assert!(output.status.success(), "stderr: {}", stderr(&output));
+    assert_eq!(stderr(&output), "");
+    let explanation = stdout(&output);
+    assert!(explanation.contains("anthropic.embedded_text_watermark"));
+    assert!(explanation.contains("status        unknown"));
+    assert!(explanation.contains(
+        "anthropic.provider_detector unpublished (unavailable in checked authority snapshot)"
+    ));
+    assert!(explanation.contains("anthropic-claude-text-watermark"));
+    assert!(explanation.contains("reference.synthid_text (related family; not deployment parity)"));
+    assert!(explanation.contains("provider_detector_unavailable"));
+    assert!(explanation.contains("claude_watermark_absent"));
+    assert!(!explanation.contains("status        clean"));
+    assert!(!explanation.contains("status        human"));
+}
+
+#[test]
+fn json_explain_is_the_same_structured_report_not_generated_prose() {
+    let artifact = TempArtifact::new(b"ordinary text");
+    let plain = Command::new(env!("CARGO_BIN_EXE_scrub"))
+        .arg("inspect")
+        .arg(artifact.path())
+        .arg("--json")
+        .output()
+        .expect("scrub process can run");
+    let explained = Command::new(env!("CARGO_BIN_EXE_scrub"))
+        .arg("inspect")
+        .arg(artifact.path())
+        .arg("--json")
+        .arg("--explain")
+        .output()
+        .expect("scrub process can run");
+    assert!(plain.status.success());
+    assert!(explained.status.success());
+    assert_eq!(plain.stdout, explained.stdout);
+    assert!(explained.stderr.is_empty());
+    let report = Report::from_json(stdout(&explained).trim_end())
+        .expect("structured untrusted report")
+        .into_report();
+    let provider = report
+        .findings()
+        .iter()
+        .find(|finding| finding.mechanism().id() == "anthropic.embedded_text_watermark")
+        .expect("provider finding exists");
+    assert_eq!(provider.status(), FindingStatus::Unknown);
+    assert_eq!(
+        provider.trace().verifier().availability(),
+        VerifierAvailability::Unavailable
+    );
+    assert!(
+        provider
+            .trace()
+            .does_not_support()
+            .contains(&InferenceId::ClaudeProviderParity)
+    );
+}
+
+#[test]
+fn json_uses_only_a_display_name_and_has_no_terminal_controls() {
+    let artifact = TempArtifact::new(b"ordinary text");
+    let output = Command::new(env!("CARGO_BIN_EXE_scrub"))
+        .arg("inspect")
+        .arg(artifact.path())
+        .arg("--json")
+        .output()
+        .expect("scrub process can run");
+    assert!(output.status.success());
+    assert!(!stdout(&output).contains(&artifact.directory.to_string_lossy().to_string()));
+    assert!(!output.stdout.contains(&0x1b));
+    assert!(!stdout(&output).contains("]8;"));
+}
+
+#[test]
+fn malformed_text_is_invalid_for_unicode_but_claude_remains_unknown() {
+    let artifact = TempArtifact::new(&[0xff]);
+    let report = inspect_json(&artifact);
+    let unicode = report
+        .findings()
+        .iter()
+        .find(|finding| finding.mechanism().id() == "unicode.bidi_control")
+        .expect("Unicode finding exists");
+    let provider = report
+        .findings()
+        .iter()
+        .find(|finding| finding.mechanism().id() == "anthropic.embedded_text_watermark")
+        .expect("provider finding exists");
+    assert_eq!(unicode.status(), FindingStatus::Invalid);
+    assert_eq!(provider.status(), FindingStatus::Unknown);
+    assert!(
+        provider
+            .trace()
+            .supports()
+            .contains(&InferenceId::ProviderDetectorUnavailable)
+    );
+    assert!(
+        provider
+            .trace()
+            .does_not_support()
+            .contains(&InferenceId::ClaudeWatermarkAbsent)
+    );
 }

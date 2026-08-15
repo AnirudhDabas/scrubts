@@ -44,6 +44,7 @@ fn invalid_finding(mechanism_id: &str) -> Finding {
         vec![INVALID_UTF8_LIMITATION.to_owned()],
         vec![],
     )
+    .expect("frozen Unicode mechanism/status pair is valid")
 }
 
 fn analyze<I>(
@@ -79,7 +80,8 @@ where
         evidence,
         vec![limitation.to_owned()],
         vec![],
-    ))
+    )
+    .expect("frozen Unicode mechanism/status pair is valid"))
 }
 
 #[derive(Debug, Clone, Eq, PartialEq)]

@@ -1,0 +1,203 @@
+{
+  "$schema": "https://json-schema.org/draft/2020-12/schema",
+  "$id": "https://scrubts.dev/schemas/report-0.2.schema.json",
+  "title": "scrub inspect report 0.2",
+  "type": "object",
+  "additionalProperties": false,
+  "required": ["schema_version", "tool", "artifact", "findings", "limitations", "assumptions"],
+  "properties": {
+    "schema_version": { "const": "0.2" },
+    "tool": { "$ref": "#/$defs/tool" },
+    "artifact": { "$ref": "#/$defs/artifact" },
+    "findings": { "type": "array", "items": { "$ref": "#/$defs/finding" } },
+    "limitations": { "$ref": "#/$defs/strings" },
+    "assumptions": { "$ref": "#/$defs/strings" }
+  },
+  "$defs": {
+    "strings": {
+      "type": "array",
+      "items": { "type": "string" },
+      "uniqueItems": true
+    },
+    "tool": {
+      "type": "object",
+      "additionalProperties": false,
+      "required": ["name", "version"],
+      "properties": {
+        "name": { "type": "string", "minLength": 1 },
+        "version": { "type": "string", "minLength": 1 }
+      }
+    },
+    "artifact": {
+      "type": "object",
+      "additionalProperties": false,
+      "required": ["path", "byte_length", "content_sha256"],
+      "properties": {
+        "path": { "type": "string", "minLength": 1 },
+        "byte_length": { "type": "integer", "minimum": 0 },
+        "content_sha256": { "type": "string", "pattern": "^[0-9a-f]{64}$" }
+      }
+    },
+    "finding": {
+      "type": "object",
+      "additionalProperties": false,
+      "required": ["mechanism", "status", "trace", "evidence", "limitations", "assumptions"],
+      "properties": {
+        "mechanism": { "$ref": "#/$defs/mechanism" },
+        "status": { "$ref": "#/$defs/status" },
+        "trace": { "$ref": "#/$defs/trace" },
+        "evidence": {
+          "type": "array",
+          "items": { "$ref": "#/$defs/evidence" },
+          "uniqueItems": true
+        },
+        "limitations": { "$ref": "#/$defs/strings" },
+        "assumptions": { "$ref": "#/$defs/strings" }
+      }
+    },
+    "mechanism": {
+      "type": "object",
+      "additionalProperties": false,
+      "required": ["id", "version"],
+      "properties": {
+        "id": { "type": "string", "minLength": 1 },
+        "version": { "type": "string", "minLength": 1 }
+      }
+    },
+    "status": {
+      "enum": ["present", "absent", "unknown", "unsupported", "invalid", "not_applicable"]
+    },
+    "evidence": {
+      "type": "object",
+      "additionalProperties": false,
+      "required": ["name", "value"],
+      "properties": {
+        "name": { "type": "string", "minLength": 1 },
+        "value": { "type": "string" }
+      }
+    },
+    "trace": {
+      "type": "object",
+      "additionalProperties": false,
+      "required": ["observation", "verifier", "authority", "configuration_identity", "supports", "does_not_support", "reproduce"],
+      "properties": {
+        "observation": {
+          "enum": [
+            "unicode_property_membership",
+            "unicode_normalization_difference",
+            "c2pa_text_manifest_wrapper",
+            "c2pa_manifest_store",
+            "c2pa_manifest_validation",
+            "c2pa_hard_binding",
+            "c2pa_credential_trust",
+            "statistical_watermark_decision",
+            "provider_text_watermark",
+            "unclassified"
+          ]
+        },
+        "verifier": { "$ref": "#/$defs/verifier" },
+        "authority": { "$ref": "#/$defs/authority" },
+        "configuration_identity": { "type": ["string", "null"] },
+        "supports": { "$ref": "#/$defs/inferences" },
+        "does_not_support": { "$ref": "#/$defs/inferences" },
+        "reproduce": { "$ref": "#/$defs/reproduce" }
+      }
+    },
+    "verifier": {
+      "type": "object",
+      "additionalProperties": false,
+      "required": ["id", "version", "availability"],
+      "properties": {
+        "id": { "type": "string", "minLength": 1 },
+        "version": { "type": "string", "minLength": 1 },
+        "availability": { "enum": ["available", "unavailable"] }
+      }
+    },
+    "authority": {
+      "type": "object",
+      "additionalProperties": false,
+      "required": ["mechanism", "implementation", "detector", "source_ids", "related_reference"],
+      "properties": {
+        "mechanism": { "$ref": "#/$defs/authority_class" },
+        "implementation": { "$ref": "#/$defs/authority_class" },
+        "detector": { "$ref": "#/$defs/authority_class" },
+        "source_ids": { "$ref": "#/$defs/strings" },
+        "related_reference": {
+          "oneOf": [
+            { "type": "null" },
+            { "$ref": "#/$defs/related_reference" }
+          ]
+        }
+      }
+    },
+    "authority_class": {
+      "enum": [
+        "STANDARD",
+        "PUBLIC_REFERENCE",
+        "PUBLIC_MECHANISM_PRIVATE_KEY",
+        "UNDOCUMENTED_PROVIDER",
+        "PROJECT_IMPLEMENTATION",
+        "UNSPECIFIED"
+      ]
+    },
+    "related_reference": {
+      "type": "object",
+      "additionalProperties": false,
+      "required": ["mechanism_id", "relationship"],
+      "properties": {
+        "mechanism_id": { "type": "string", "minLength": 1 },
+        "relationship": { "const": "related_family_not_deployment_parity" }
+      }
+    },
+    "inferences": {
+      "type": "array",
+      "items": { "$ref": "#/$defs/inference" },
+      "uniqueItems": true
+    },
+    "inference": {
+      "enum": [
+        "unicode_property_present",
+        "unicode_property_absent_within_scope",
+        "unicode_normalization_difference_present",
+        "unicode_normalization_difference_absent_within_scope",
+        "c2pa_carrier_present",
+        "c2pa_carrier_absent_within_scope",
+        "c2pa_manifest_store_present",
+        "c2pa_manifest_store_absent_within_scope",
+        "c2pa_claim_valid",
+        "c2pa_hard_binding_valid",
+        "c2pa_credential_trusted",
+        "provider_mechanism_family_disclosed",
+        "provider_detector_unavailable",
+        "public_reference_watermark_present",
+        "public_reference_watermark_absent_within_configuration",
+        "artifact_clean",
+        "human_authorship",
+        "ai_authorship",
+        "malicious_intent",
+        "watermark_present",
+        "watermark_absent",
+        "c2pa_claim_validity",
+        "c2pa_hard_binding",
+        "c2pa_credential_trust",
+        "authorship",
+        "truthfulness",
+        "claude_watermark_present",
+        "claude_watermark_absent",
+        "claude_provider_parity"
+      ]
+    },
+    "reproduce": {
+      "type": "object",
+      "additionalProperties": false,
+      "required": ["command"],
+      "properties": {
+        "command": {
+          "type": "array",
+          "minItems": 1,
+          "items": { "type": "string", "minLength": 1 }
+        }
+      }
+    }
+  }
+}

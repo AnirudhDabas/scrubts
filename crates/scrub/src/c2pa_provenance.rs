@@ -982,6 +982,7 @@ fn finding(
             .collect(),
         vec![],
     )
+    .expect("frozen C2PA mechanism/status pair is valid")
 }
 
 fn not_applicable(id: &str) -> Finding {

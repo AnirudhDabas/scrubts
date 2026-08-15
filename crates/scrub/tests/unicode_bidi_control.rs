@@ -111,14 +111,21 @@ fn real_inspection_path_matches_all_35_frozen_fixtures() {
             .strip_suffix('\n')
             .expect("JSON output has one trailing newline");
         assert!(!json.contains('\n'), "{} JSON is one line", fixture.name);
-        let report = Report::from_json(json).expect("stdout is a report");
+        let report = Report::from_json(json)
+            .expect("stdout is an untrusted report")
+            .into_report();
         assert_eq!(
             report.to_json().expect("report reserializes"),
             json,
             "{} stdout is canonical",
             fixture.name
         );
-        assert_eq!(report.findings().len(), 9, "{} finding count", fixture.name);
+        assert_eq!(
+            report.findings().len(),
+            10,
+            "{} finding count",
+            fixture.name
+        );
         assert_eq!(
             report
                 .findings()
@@ -135,6 +142,7 @@ fn real_inspection_path_matches_all_35_frozen_fixtures() {
                 C2PA_IDS[2],
                 C2PA_IDS[3],
                 C2PA_IDS[4],
+                "anthropic.embedded_text_watermark",
             ],
             "{} finding order",
             fixture.name
@@ -298,7 +306,9 @@ fn actual_json_and_stderr_bytes_are_identical_across_eight_runs() {
         assert_eq!(next.stderr, first.stderr, "run {run} stderr bytes");
     }
 
-    let report = Report::from_json(stdout(&first).trim_end()).expect("stdout is a report");
+    let report = Report::from_json(stdout(&first).trim_end())
+        .expect("stdout is an untrusted report")
+        .into_report();
     assert_eq!(
         report
             .findings()
@@ -315,6 +325,7 @@ fn actual_json_and_stderr_bytes_are_identical_across_eight_runs() {
             C2PA_IDS[2],
             C2PA_IDS[3],
             C2PA_IDS[4],
+            "anthropic.embedded_text_watermark",
         ]
     );
     let bidi = finding(&report, BIDI_MECHANISM_ID);
@@ -334,7 +345,9 @@ fn inspect_fixture(name: &str) -> (TempArtifact, Report) {
         stderr(&output)
     );
     assert_eq!(stderr(&output), "", "{name} stderr");
-    let report = Report::from_json(stdout(&output).trim_end()).expect("stdout is a report");
+    let report = Report::from_json(stdout(&output).trim_end())
+        .expect("stdout is an untrusted report")
+        .into_report();
     (artifact, report)
 }
 

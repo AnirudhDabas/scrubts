@@ -1,0 +1,137 @@
+{
+  "schema_version": "0.1",
+  "claims": [
+    {
+      "claim_id": "artifact.identity.sha256",
+      "claim_text": "scrub inspect reports the byte length and SHA-256 identity of the exact bytes read.",
+      "claim_class": "measured",
+      "status": "established",
+      "evidence_artifacts": ["crates/scrub/tests/cli.rs"],
+      "authority_source_ids": [],
+      "reproduce_command": ["cargo", "test", "--offline", "-p", "scrub", "--test", "cli"],
+      "expected_result": "The complete CLI identity suite verifies byte length and SHA-256 for ordinary, empty, and multi-buffer artifacts.",
+      "limitations": ["SHA-256 is artifact identity, not provenance or authorship evidence."]
+    },
+    {
+      "claim_id": "report.machine_contract",
+      "claim_text": "scrub inspect JSON is schema-valid, unadorned, and byte-repeatable for one local fixed artifact and configuration.",
+      "claim_class": "measured",
+      "status": "established",
+      "evidence_artifacts": ["schemas/report-0.2.schema.json", "crates/scrub/tests/cli.rs"],
+      "authority_source_ids": [],
+      "reproduce_command": ["internal:report-contract"],
+      "expected_result": "Two local invocations are byte-identical, parse under report schema 0.2, and contain no ANSI, OSC, timestamp, hostname, or absolute input path.",
+      "limitations": ["Local repeatability does not establish cross-platform determinism or RFC 8785 compliance."]
+    },
+    {
+      "claim_id": "unicode.source_identity",
+      "claim_text": "Committed Unicode normalization fixtures have the pinned Unicode 17.0.0 identities recorded by the repository.",
+      "claim_class": "replicated",
+      "status": "established",
+      "evidence_artifacts": ["crates/scrub/tests/fixtures/NormalizationTest-17.0.0.txt", "crates/scrub/tests/fixtures/DerivedAge-17.0.0.txt", "crates/scrub/tests/unicode_normalization_oracle.rs"],
+      "authority_source_ids": ["unicode-normalization-test-17.0.0", "unicode-derived-age-17.0.0"],
+      "reproduce_command": ["cargo", "test", "--offline", "-p", "scrub", "--test", "unicode_normalization_oracle", "committed_official_fixtures_and_license_have_pinned_raw_identities"],
+      "expected_result": "The fixture and license byte identities match their frozen SHA-256 values.",
+      "limitations": ["This proves committed source identity, not every Unicode scanner behavior."]
+    },
+    {
+      "claim_id": "unicode.normalization.conformance",
+      "claim_text": "The production Unicode normalization implementation conforms to the committed Unicode 17.0.0 oracle corpus.",
+      "claim_class": "replicated",
+      "status": "established",
+      "evidence_artifacts": ["crates/scrub/tests/unicode_normalization_conformance.rs", "crates/scrub/tests/fixtures/NormalizationTest-17.0.0.txt", "crates/scrub/tests/fixtures/DerivedAge-17.0.0.txt"],
+      "authority_source_ids": ["unicode-uax15-17.0.0", "unicode-normalization-test-17.0.0", "unicode-normalization-crate-0.1.25"],
+      "reproduce_command": ["cargo", "test", "--offline", "-p", "scrub", "--test", "unicode_normalization_conformance"],
+      "expected_result": "All normalization conformance and assigned/unassigned scalar identity tests exit successfully.",
+      "limitations": ["The proof is scoped to the frozen Unicode 17.0.0 corpus and implementation revision."]
+    },
+    {
+      "claim_id": "c2pa.semantic_separation",
+      "claim_text": "The typed scrub report keeps C2PA presence, claim validity, hard binding, credential trust, and authorship as distinct semantics.",
+      "claim_class": "measured",
+      "status": "established",
+      "evidence_artifacts": ["crates/scrub/tests/c2pa.rs", "docs/specs/c2pa-provenance.md"],
+      "authority_source_ids": ["c2pa-spec-2.4", "c2pa-rs"],
+      "reproduce_command": ["cargo", "test", "--offline", "-p", "scrub-report", "c2pa_trace_preserves_presence_validity_binding_and_trust_ladder"],
+      "expected_result": "The typed-report regression preserves distinct presence, validity, binding, trust, and authorship boundaries.",
+      "limitations": ["This is project semantic/integration evidence, not an independent cryptographic C2PA implementation; C2PA evidence does not by itself establish truth or human/AI authorship."]
+    },
+    {
+      "claim_id": "waterlarp.source_identity",
+      "claim_text": "WaterLARP records unique source IDs and pinned artifact identities for its integrated public references, including KGW.",
+      "claim_class": "measured",
+      "status": "established",
+      "evidence_artifacts": ["research/sources.yaml", "waterlarp/src/waterlarp/authority_sources.py"],
+      "authority_source_ids": ["kgw", "kgw-reliability", "synthid-text", "synthid-text-transformers"],
+      "reproduce_command": ["{waterlarp_python}", "-m", "waterlarp", "sources", "verify"],
+      "expected_result": "The offline source verifier reports unique source IDs and all recorded pinned artifact identities.",
+      "limitations": ["The offline oracle verifies recorded identities; it does not execute the pinned KGW upstream checkout."]
+    },
+    {
+      "claim_id": "synthid.public_reference_parity",
+      "claim_text": "The committed SynthID CPU fixture matches the pinned public Transformers reference behavior.",
+      "claim_class": "replicated",
+      "status": "established",
+      "evidence_artifacts": ["waterlarp/tests/fixtures/synthid_cpu_reference.json", "waterlarp/tests/test_parity_synthid.py"],
+      "authority_source_ids": ["synthid-text", "synthid-text-transformers"],
+      "reproduce_command": ["{waterlarp_python}", "-m", "pytest", "-q", "-c", "waterlarp/pyproject.toml", "waterlarp/tests/test_parity_synthid.py"],
+      "expected_result": "The pinned public-reference processor reproduces the committed g-values, repetition mask, and weighted mean.",
+      "limitations": ["Public-reference parity is not Gemini or Claude provider deployment parity."]
+    },
+    {
+      "claim_id": "anthropic.mechanism_family",
+      "claim_text": "The checked Anthropic source snapshot records that Claude's text watermark uses a version of the SynthID-Text approach.",
+      "claim_class": "vendor_reported",
+      "status": "established",
+      "evidence_artifacts": ["research/sources.yaml", "waterlarp/tests/test_sources.py"],
+      "authority_source_ids": ["anthropic-claude-text-watermark"],
+      "reproduce_command": ["{waterlarp_python}", "-m", "pytest", "-q", "-c", "waterlarp/pyproject.toml", "waterlarp/tests/test_sources.py::test_anthropic_primary_sources_freeze_family_without_provider_parity"],
+      "expected_result": "The pinned primary-source snapshot test preserves mechanism-family disclosure and rejects provider parity.",
+      "limitations": ["This is a provider-reported family statement, not an independently replicated detector claim."]
+    },
+    {
+      "claim_id": "anthropic.detector_status",
+      "claim_text": "The pinned Anthropic authority snapshot records Claude embedded text-watermark status as UNKNOWN because the provider detector contract and prerequisites are unavailable in that snapshot.",
+      "claim_class": "unknown",
+      "status": "unknown",
+      "evidence_artifacts": ["waterlarp/src/waterlarp/authority.py", "waterlarp/tests/test_authority.py", "crates/scrub/src/provider_watermark.rs"],
+      "authority_source_ids": ["anthropic-claude-text-watermark", "anthropic-claude-marking"],
+      "reproduce_command": ["{waterlarp_python}", "-m", "pytest", "-q", "-c", "waterlarp/pyproject.toml", "waterlarp/tests/test_authority.py"],
+      "expected_result": "Authority tests prove the pinned provider snapshot is non-runnable and public SynthID decisions cannot answer Claude status.",
+      "limitations": ["UNKNOWN does not imply human authorship, absence, or a negative provider result."]
+    },
+    {
+      "claim_id": "waterlarp.pilot_scope",
+      "claim_text": "The WaterLARP CPU pilot profile is integration-only and excludes provider authorities.",
+      "claim_class": "measured",
+      "status": "established",
+      "evidence_artifacts": ["waterlarp/configs/pilot/cpu.yaml", "waterlarp/tests/test_manifests.py"],
+      "authority_source_ids": ["kgw", "synthid-text"],
+      "reproduce_command": ["{waterlarp_python}", "-m", "pytest", "-q", "-c", "waterlarp/pyproject.toml", "waterlarp/tests/test_manifests.py::test_cpu_pilot_remains_integration_only_and_excludes_provider_authorities"],
+      "expected_result": "The pilot contract remains PILOT_NOT_BENCHMARK_EVIDENCE and excludes Anthropic provider execution.",
+      "limitations": ["This is a publication-scope invariant, not benchmark performance evidence."]
+    },
+    {
+      "claim_id": "proof.orchestrator.fail_closed",
+      "claim_text": "The proof orchestrator marks required command failures as FAIL and cannot complete proof when a required oracle fails.",
+      "claim_class": "measured",
+      "status": "established",
+      "evidence_artifacts": ["tools/prove.py", "tools/tests/test_prove.py", "schemas/proof-0.1.schema.json"],
+      "authority_source_ids": [],
+      "reproduce_command": ["{waterlarp_python}", "-m", "unittest", "discover", "-s", "tools/tests", "-v"],
+      "expected_result": "Unit tests prove zero is the only PASS exit and a failed required gate yields PROOF_FAILED with the failure reason retained.",
+      "limitations": ["These tests exercise orchestration invariants; each scientific oracle retains its own domain tests."]
+    },
+    {
+      "claim_id": "claim.ledger.integrity",
+      "claim_text": "The canonical public-claim ledger is schema-valid and all local evidence and authority references resolve.",
+      "claim_class": "measured",
+      "status": "established",
+      "evidence_artifacts": ["evidence/claims.json", "schemas/claims-0.1.schema.json"],
+      "authority_source_ids": [],
+      "reproduce_command": ["internal:claim-ledger"],
+      "expected_result": "The ledger schema, unique IDs, status/class combinations, evidence paths, source IDs, and reproduction commands validate.",
+      "limitations": ["Ledger integrity proves consistency of recorded claims, not claims absent from the ledger."]
+    }
+  ]
+}

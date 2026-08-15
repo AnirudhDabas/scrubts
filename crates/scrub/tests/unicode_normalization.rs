@@ -65,8 +65,15 @@ fn compiled_cli_matches_the_complete_scrub_specific_corpus() {
             .strip_suffix('\n')
             .expect("JSON output has one trailing newline");
         assert!(!json.contains('\n'), "{} JSON is one line", fixture.name);
-        let report = Report::from_json(json).expect("stdout is a report");
-        assert_eq!(report.findings().len(), 9, "{} finding count", fixture.name);
+        let report = Report::from_json(json)
+            .expect("stdout is an untrusted report")
+            .into_report();
+        assert_eq!(
+            report.findings().len(),
+            10,
+            "{} finding count",
+            fixture.name
+        );
         assert_eq!(
             report
                 .findings()
@@ -83,6 +90,7 @@ fn compiled_cli_matches_the_complete_scrub_specific_corpus() {
                 "c2pa.manifest_validation",
                 "c2pa.hard_binding",
                 "c2pa.credential_trust",
+                "anthropic.embedded_text_watermark",
             ],
             "{} finding order",
             fixture.name
@@ -182,9 +190,9 @@ fn raw_json_and_human_output_freeze_public_order_and_neutral_wording() {
         stderr(&human_output)
     );
     let human = stdout(&human_output);
-    assert!(human.contains("mechanism: NFC difference (Unicode 17.0.0)"));
-    assert!(human.contains("mechanism: NFKC difference (Unicode 17.0.0)"));
-    assert!(human.contains("evidence: first_difference={\"scalar_index\":1"));
+    assert!(human.contains("PRESENT      NFC difference"));
+    assert!(human.contains("PRESENT      NFKC difference"));
+    assert!(human.contains("first_difference={\"scalar_index\":1"));
     assert!(!human.contains('\u{301}'));
     assert!(!human.contains('\u{fb03}'));
     let lower = human.to_ascii_lowercase();
@@ -195,7 +203,6 @@ fn raw_json_and_human_output_freeze_public_order_and_neutral_wording() {
         "watermark removed",
         "ai-generated",
         "sanitized",
-        "clean",
         "safe",
     ] {
         assert!(
@@ -213,51 +220,30 @@ fn complete_human_output_is_frozen_for_a_canonical_difference() {
     assert_eq!(stderr(&output), "");
     assert_eq!(
         stdout(&output),
-        format!(
-            concat!(
-                "artifact: {}\n",
-                "bytes: 3\n",
-                "sha256: bf12767b0f2a56b2190075bae8169f656e3ce8d6357d4aff184bc6c7ea48f9f6\n",
-                "mechanism: Bidi_Control (Unicode 17.0.0)\n",
-                "status: absent\n",
-                "evidence: locations=[]\n",
-                "evidence: locations_truncated=false\n",
-                "evidence: total_occurrence_count=0\n",
-                "finding limitation: Bidi_Control presence is a neutral Unicode property observation; directional-formatting controls may have legitimate uses.\n",
-                "mechanism: Default_Ignorable_Code_Point (Unicode 17.0.0)\n",
-                "status: absent\n",
-                "evidence: locations=[]\n",
-                "evidence: locations_truncated=false\n",
-                "evidence: total_occurrence_count=0\n",
-                "finding limitation: Default_Ignorable_Code_Point presence is a neutral Unicode property observation; values may have legitimate formatting, shaping, language, or emoji uses.\n",
-                "mechanism: NFC difference (Unicode 17.0.0)\n",
-                "status: present\n",
-                "evidence: first_difference={{\"scalar_index\":0,\"original_byte_offset\":0,\"original\":{{\"at_end\":false,\"scalars\":[\"U+0065\",\"U+0301\"],\"truncated\":false}},\"normalized\":{{\"at_end\":false,\"scalars\":[\"U+00E9\"],\"truncated\":false}}}}\n",
-                "evidence: normalized_byte_length=2\n",
-                "evidence: normalized_scalar_count=1\n",
-                "evidence: normalized_sha256=4a99557e4033c3539de2eb65472017cad5f9557f7a0625a09f1c3f6e2ba69c4c\n",
-                "finding limitation: An NFC difference is a neutral Unicode normalization observation; it does not establish security risk, provenance, authorship, intent, or watermark presence.\n",
-                "mechanism: NFKC difference (Unicode 17.0.0)\n",
-                "status: present\n",
-                "evidence: first_difference={{\"scalar_index\":0,\"original_byte_offset\":0,\"original\":{{\"at_end\":false,\"scalars\":[\"U+0065\",\"U+0301\"],\"truncated\":false}},\"normalized\":{{\"at_end\":false,\"scalars\":[\"U+00E9\"],\"truncated\":false}}}}\n",
-                "evidence: normalized_byte_length=2\n",
-                "evidence: normalized_scalar_count=1\n",
-                "evidence: normalized_sha256=4a99557e4033c3539de2eb65472017cad5f9557f7a0625a09f1c3f6e2ba69c4c\n",
-                "finding limitation: An NFKC difference is a neutral Unicode compatibility-normalization observation; compatibility folding can erase distinctions and must not be interpreted as sanitization, security risk, provenance, authorship, intent, or watermark presence.\n",
-                "mechanism: c2pa.text_manifest_wrapper (C2PA 2.4)\n",
-                "status: absent\n",
-                "finding limitation: C2PA 2.4 Appendix A.8 remains under review and may change; this carrier is distinct from Claude embedded text watermarking.\n",
-                "mechanism: c2pa.manifest_store (C2PA 2.4)\n",
-                "status: not_applicable\n",
-                "mechanism: c2pa.manifest_validation (C2PA 2.4)\n",
-                "status: not_applicable\n",
-                "mechanism: c2pa.hard_binding (C2PA 2.4)\n",
-                "status: not_applicable\n",
-                "mechanism: c2pa.credential_trust (C2PA 2.4)\n",
-                "status: not_applicable\n",
-                "limitation: Inspection evaluates Unicode 17.0.0 Default_Ignorable_Code_Point, Bidi_Control, NFC-difference, and NFKC-difference observations plus C2PA 2.4 Appendix A.8 carrier evidence and embedded PNG, JPEG, and SVG provenance; confusable, sanitization, unrelated metadata, statistical watermark, Claude-specific embedded text watermark detection, and WaterLARP mechanisms are not evaluated.\n",
-            ),
-            artifact.path().display()
+        concat!(
+            "scrub inspect\n",
+            "\n",
+            "Artifact\n",
+            "  name    artifact.txt\n",
+            "  bytes   3\n",
+            "  sha256  bf12767b0f2a56b2190075bae8169f656e3ce8d6357d4aff184bc6c7ea48f9f6\n",
+            "\n",
+            "Evidence\n",
+            "  Unicode  PRESENT      NFC difference\n",
+            "             first_difference={\"scalar_index\":0,\"original_byte_offset\":0,\"original\":{\"at_end\":false,\"scalars\":[\"U+0065\",\"U+0301\"],\"truncated\":false},\"normalized\":{\"at_end\":false,\"scalars\":[\"U+00E9\"],\"truncated\":false}}\n",
+            "             normalized_byte_length=2\n",
+            "  Unicode  PRESENT      NFKC difference\n",
+            "             first_difference={\"scalar_index\":0,\"original_byte_offset\":0,\"original\":{\"at_end\":false,\"scalars\":[\"U+0065\",\"U+0301\"],\"truncated\":false},\"normalized\":{\"at_end\":false,\"scalars\":[\"U+00E9\"],\"truncated\":false}}\n",
+            "             normalized_byte_length=2\n",
+            "  C2PA     ABSENT       text manifest wrapper\n",
+            "  Claude   UNKNOWN      embedded text watermark\n",
+            "             verifier anthropic.provider_detector (unavailable in checked authority snapshot)\n",
+            "             related reference reference.synthid_text (related family; not deployment parity)\n",
+            "             does not support claude_provider_parity\n",
+            "\n",
+            "Boundary\n",
+            "  UNKNOWN and UNSUPPORTED are not negative findings; this report does not establish authorship or that the artifact is clean.\n",
+            "  Use --explain for the authority and inference trace.\n",
         )
     );
 }
@@ -290,7 +276,9 @@ fn malformed_utf8_variants_are_invalid_without_normalized_prefix_evidence() {
             "{name} stderr: {}",
             stderr(&output)
         );
-        let report = Report::from_json(stdout(&output).trim_end()).expect("stdout is report");
+        let report = Report::from_json(stdout(&output).trim_end())
+            .expect("stdout is an untrusted report")
+            .into_report();
         assert_eq!(
             report.artifact().byte_length(),
             u64::try_from(input.len()).expect("fixture length fits u64"),

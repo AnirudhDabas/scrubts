@@ -7,17 +7,21 @@ use std::io::{self, Read, Write};
 use std::path::{Path, PathBuf};
 use std::process::ExitCode;
 
-use scrub_report::{ArtifactIdentity, Report, Sha256Digest, ToolIdentity};
+use scrub_report::{
+    ArtifactIdentity, AuthorityClass, Finding, FindingStatus, InferenceId, ObservationKind,
+    ReferenceRelationship, Report, Sha256Digest, ToolIdentity, VerifierAvailability,
+};
 use sha2::{Digest, Sha256};
 
 mod c2pa_provenance;
+mod provider_watermark;
 mod unicode_bidi_control;
 mod unicode_default_ignorable;
 mod unicode_normalization;
 mod utf8_stream;
 
-const USAGE: &str = "Usage: scrub inspect <path> [--json]";
-const UNEVALUATED_MECHANISMS_LIMITATION: &str = "Inspection evaluates Unicode 17.0.0 Default_Ignorable_Code_Point, Bidi_Control, NFC-difference, and NFKC-difference observations plus C2PA 2.4 Appendix A.8 carrier evidence and embedded PNG, JPEG, and SVG provenance; confusable, sanitization, unrelated metadata, statistical watermark, Claude-specific embedded text watermark detection, and WaterLARP mechanisms are not evaluated.";
+const USAGE: &str = "Usage: scrub inspect <path> [--explain] [--json]";
+const UNEVALUATED_MECHANISMS_LIMITATION: &str = "Inspection evaluates the listed Unicode and C2PA mechanisms and represents Claude provider-detector availability; confusables, sanitization, unrelated metadata, public-reference statistical detectors, and WaterLARP mechanisms are not evaluated.";
 
 fn main() -> ExitCode {
     let command = match parse_args(env::args_os().skip(1)) {
@@ -39,6 +43,7 @@ fn main() -> ExitCode {
     let stdout = io::stdout();
     let mut stdout = stdout.lock();
     let result = match command.output {
+        Output::Human if command.explain => write_explain(&mut stdout, &report),
         Output::Human => write_human(&mut stdout, &report),
         Output::Json => write_json(&mut stdout, &report),
     };
@@ -60,6 +65,7 @@ enum Output {
 struct InspectCommand {
     path: PathBuf,
     output: Output,
+    explain: bool,
 }
 
 fn parse_args(arguments: impl IntoIterator<Item = OsString>) -> Result<InspectCommand, CliError> {
@@ -72,6 +78,7 @@ fn parse_args(arguments: impl IntoIterator<Item = OsString>) -> Result<InspectCo
 
     let mut path = None;
     let mut output = Output::Human;
+    let mut explain = false;
     let mut options = true;
     for argument in arguments {
         if options && argument == "--" {
@@ -81,6 +88,11 @@ fn parse_args(arguments: impl IntoIterator<Item = OsString>) -> Result<InspectCo
                 return Err(CliError::DuplicateJsonOption);
             }
             output = Output::Json;
+        } else if options && argument == "--explain" {
+            if explain {
+                return Err(CliError::DuplicateExplainOption);
+            }
+            explain = true;
         } else if options && argument.to_string_lossy().starts_with('-') {
             return Err(CliError::UnknownOption(argument));
         } else if path.replace(PathBuf::from(argument)).is_some() {
@@ -89,7 +101,11 @@ fn parse_args(arguments: impl IntoIterator<Item = OsString>) -> Result<InspectCo
     }
 
     let path = path.ok_or(CliError::MissingPath)?;
-    Ok(InspectCommand { path, output })
+    Ok(InspectCommand {
+        path,
+        output,
+        explain,
+    })
 }
 
 #[derive(Debug, Eq, PartialEq)]
@@ -100,6 +116,7 @@ enum CliError {
     TooManyPaths,
     UnknownOption(OsString),
     DuplicateJsonOption,
+    DuplicateExplainOption,
 }
 
 impl fmt::Display for CliError {
@@ -119,6 +136,9 @@ impl fmt::Display for CliError {
                 write!(formatter, "unknown option: {:?}", option.to_string_lossy())
             }
             Self::DuplicateJsonOption => formatter.write_str("--json may be specified only once"),
+            Self::DuplicateExplainOption => {
+                formatter.write_str("--explain may be specified only once")
+            }
         }
     }
 }
@@ -236,12 +256,15 @@ fn inspect_reader(path: &Path, reader: &mut impl Read) -> Result<Report, Inspect
 
     let digest: [u8; 32] = hasher.finalize().into();
     let mut limitations = vec![UNEVALUATED_MECHANISMS_LIMITATION.to_owned()];
-    let display_path = match path.to_str() {
-        Some(path) => path.to_owned(),
+    let display_path = match path.file_name().and_then(|name| name.to_str()) {
+        Some(name) => name.to_owned(),
         None => {
             limitations
-                .push("The artifact path was lossily converted to Unicode for display.".to_owned());
-            path.to_string_lossy().into_owned()
+                .push("The artifact display name was lossily converted to Unicode.".to_owned());
+            path.file_name().map_or_else(
+                || "<artifact>".to_owned(),
+                |name| name.to_string_lossy().into_owned(),
+            )
         }
     };
 
@@ -253,6 +276,7 @@ fn inspect_reader(path: &Path, reader: &mut impl Read) -> Result<Report, Inspect
     } else {
         unicode_normalization::invalid_findings()
     };
+    let textual_artifact = c2pa_binary.is_none() && (valid_utf8 || is_plain_text_path(path));
     let c2pa_findings = if let Some((format, bytes)) = c2pa_binary {
         c2pa_provenance::binary_format_findings(format, &bytes).map_err(InspectError::C2pa)?
     } else if valid_utf8 {
@@ -271,13 +295,15 @@ fn inspect_reader(path: &Path, reader: &mut impl Read) -> Result<Report, Inspect
         nfkc_finding,
     ];
     findings.extend(c2pa_findings);
+    findings.push(provider_watermark::finding(textual_artifact));
     Ok(Report::new(
         ToolIdentity::new("scrub", env!("CARGO_PKG_VERSION")),
         ArtifactIdentity::new(display_path, byte_length, Sha256Digest::from_bytes(digest)),
         findings,
         limitations,
         vec![],
-    ))
+    )
+    .expect("the scanner constructs unique valid mechanism findings"))
 }
 
 fn is_plain_text_path(path: &Path) -> bool {
@@ -346,31 +372,240 @@ impl Error for InspectError {
 }
 
 fn write_human(writer: &mut impl Write, report: &Report) -> Result<(), OutputError> {
-    writeln!(writer, "artifact: {}", report.artifact().path())?;
-    writeln!(writer, "bytes: {}", report.artifact().byte_length())?;
-    writeln!(writer, "sha256: {}", report.artifact().content_sha256())?;
-    for finding in report.findings() {
+    writeln!(writer, "scrub inspect")?;
+    writeln!(writer)?;
+    writeln!(writer, "Artifact")?;
+    writeln!(
+        writer,
+        "  name    {}",
+        terminal_safe(report.artifact().path())
+    )?;
+    writeln!(writer, "  bytes   {}", report.artifact().byte_length())?;
+    writeln!(writer, "  sha256  {}", report.artifact().content_sha256())?;
+
+    let unicode: Vec<_> = report
+        .findings()
+        .iter()
+        .filter(|finding| finding.mechanism().id().starts_with("unicode."))
+        .collect();
+    writeln!(writer)?;
+    writeln!(writer, "Evidence")?;
+    let notable_unicode: Vec<_> = unicode
+        .iter()
+        .copied()
+        .filter(|finding| finding.status() != FindingStatus::Absent)
+        .collect();
+    if notable_unicode.is_empty() {
         writeln!(
             writer,
-            "mechanism: {} ({} {})",
-            mechanism_display_name(finding.mechanism().id()),
-            if finding.mechanism().id().starts_with("c2pa.") {
-                "C2PA"
-            } else {
-                "Unicode"
-            },
-            finding.mechanism().version()
+            "  Unicode  ABSENT  no listed property or normalization difference observed"
         )?;
-        writeln!(writer, "status: {}", finding.status())?;
-        for evidence in finding.evidence() {
-            writeln!(writer, "evidence: {}={}", evidence.name(), evidence.value())?;
-        }
-        for limitation in finding.limitations() {
-            writeln!(writer, "finding limitation: {limitation}")?;
+    } else {
+        for finding in notable_unicode {
+            write_finding_summary(writer, "Unicode", finding)?;
         }
     }
-    for limitation in report.limitations() {
-        writeln!(writer, "limitation: {limitation}")?;
+
+    let c2pa: Vec<_> = report
+        .findings()
+        .iter()
+        .filter(|finding| finding.mechanism().id().starts_with("c2pa."))
+        .collect();
+    let notable_c2pa: Vec<_> = c2pa
+        .iter()
+        .copied()
+        .filter(|finding| {
+            finding.status() != FindingStatus::NotApplicable
+                && !(finding.status() == FindingStatus::Absent
+                    && finding.mechanism().id() != c2pa_provenance::MANIFEST_STORE_ID)
+        })
+        .collect();
+    if notable_c2pa.is_empty() {
+        if let Some(wrapper) = c2pa
+            .iter()
+            .copied()
+            .find(|finding| finding.mechanism().id() == c2pa_provenance::TEXT_WRAPPER_ID)
+            .filter(|finding| finding.status() == FindingStatus::Absent)
+        {
+            write_finding_summary(writer, "C2PA", wrapper)?;
+        } else {
+            writeln!(writer, "  C2PA     NOT_APPLICABLE")?;
+        }
+    } else {
+        for finding in notable_c2pa {
+            write_finding_summary(writer, "C2PA", finding)?;
+        }
+    }
+
+    if let Some(provider) = report
+        .findings()
+        .iter()
+        .find(|finding| finding.mechanism().id() == provider_watermark::MECHANISM_ID)
+    {
+        write_finding_summary(writer, "Claude", provider)?;
+        if provider.status() == FindingStatus::Unknown {
+            let verifier = provider.trace().verifier();
+            writeln!(
+                writer,
+                "             verifier {} ({})",
+                verifier.id(),
+                verifier_availability_label(verifier.availability())
+            )?;
+            if let Some(reference) = provider.trace().authority().related_reference() {
+                writeln!(
+                    writer,
+                    "             related reference {} ({})",
+                    reference.mechanism_id(),
+                    reference_relationship_label(reference.relationship())
+                )?;
+            }
+            if provider
+                .trace()
+                .does_not_support()
+                .contains(&InferenceId::ClaudeProviderParity)
+            {
+                writeln!(
+                    writer,
+                    "             does not support {}",
+                    inference_label(InferenceId::ClaudeProviderParity)
+                )?;
+            }
+        }
+    }
+
+    writeln!(writer)?;
+    writeln!(writer, "Boundary")?;
+    writeln!(
+        writer,
+        "  UNKNOWN and UNSUPPORTED are not negative findings; this report does not establish authorship or that the artifact is clean."
+    )?;
+    writeln!(
+        writer,
+        "  Use --explain for the authority and inference trace."
+    )?;
+    Ok(())
+}
+
+fn write_finding_summary(
+    writer: &mut impl Write,
+    group: &str,
+    finding: &Finding,
+) -> Result<(), OutputError> {
+    writeln!(
+        writer,
+        "  {group:<9}{:<13}{}",
+        finding.status().as_str().to_ascii_uppercase(),
+        mechanism_display_name(finding.mechanism().id())
+    )?;
+    if finding.status() == FindingStatus::Present {
+        for evidence in finding.evidence().iter().take(2) {
+            writeln!(
+                writer,
+                "             {}={}",
+                terminal_safe(evidence.name()),
+                terminal_safe(evidence.value())
+            )?;
+        }
+    }
+    Ok(())
+}
+
+fn write_explain(writer: &mut impl Write, report: &Report) -> Result<(), OutputError> {
+    write_human(writer, report)?;
+    writeln!(writer)?;
+    writeln!(writer, "Evidence trace")?;
+    for finding in report.findings() {
+        writeln!(writer)?;
+        writeln!(
+            writer,
+            "{} [{}]",
+            mechanism_display_name(finding.mechanism().id()),
+            finding.mechanism().id()
+        )?;
+        writeln!(writer, "  status        {}", finding.status())?;
+        writeln!(
+            writer,
+            "  observation   {}",
+            observation_label(finding.trace().observation())
+        )?;
+        if finding.evidence().is_empty() {
+            writeln!(writer, "  evidence      none retained")?;
+        } else {
+            for evidence in finding.evidence() {
+                writeln!(
+                    writer,
+                    "  evidence      {}={}",
+                    terminal_safe(evidence.name()),
+                    terminal_safe(evidence.value())
+                )?;
+            }
+        }
+        let verifier = finding.trace().verifier();
+        writeln!(
+            writer,
+            "  verifier      {} {} ({})",
+            verifier.id(),
+            verifier.version(),
+            verifier_availability_label(verifier.availability())
+        )?;
+        let authority = finding.trace().authority();
+        writeln!(
+            writer,
+            "  authority     mechanism={}, implementation={}, detector={}",
+            authority_label(authority.mechanism()),
+            authority_label(authority.implementation()),
+            authority_label(authority.detector())
+        )?;
+        writeln!(
+            writer,
+            "  sources       {}",
+            authority.source_ids().join(", ")
+        )?;
+        if let Some(configuration) = finding.trace().configuration_identity() {
+            writeln!(writer, "  configuration {configuration}")?;
+        }
+        if let Some(reference) = authority.related_reference() {
+            writeln!(
+                writer,
+                "  related       {} ({})",
+                reference.mechanism_id(),
+                reference_relationship_label(reference.relationship())
+            )?;
+        }
+        write_inferences(writer, "supports", finding.trace().supports())?;
+        write_inferences(
+            writer,
+            "does not support",
+            finding.trace().does_not_support(),
+        )?;
+        for limitation in finding.limitations() {
+            writeln!(writer, "  limitation    {}", terminal_safe(limitation))?;
+        }
+        writeln!(
+            writer,
+            "  reproduce     {}",
+            finding.trace().reproduce().command().join(" ")
+        )?;
+    }
+    Ok(())
+}
+
+fn write_inferences(
+    writer: &mut impl Write,
+    label: &str,
+    inferences: &[InferenceId],
+) -> Result<(), OutputError> {
+    if inferences.is_empty() {
+        writeln!(writer, "  {label:<13}none")?;
+    } else {
+        for (index, inference) in inferences.iter().enumerate() {
+            writeln!(
+                writer,
+                "  {:<13}{}",
+                if index == 0 { label } else { "" },
+                inference_label(*inference)
+            )?;
+        }
     }
     Ok(())
 }
@@ -381,7 +616,110 @@ fn mechanism_display_name(mechanism_id: &str) -> &str {
         unicode_default_ignorable::MECHANISM_ID => "Default_Ignorable_Code_Point",
         unicode_normalization::NFC_MECHANISM_ID => "NFC difference",
         unicode_normalization::NFKC_MECHANISM_ID => "NFKC difference",
+        c2pa_provenance::TEXT_WRAPPER_ID => "text manifest wrapper",
+        c2pa_provenance::MANIFEST_STORE_ID => "manifest store",
+        c2pa_provenance::MANIFEST_VALIDATION_ID => "manifest validation",
+        c2pa_provenance::HARD_BINDING_ID => "hard binding",
+        c2pa_provenance::CREDENTIAL_TRUST_ID => "credential trust",
+        provider_watermark::MECHANISM_ID => "embedded text watermark",
         _ => mechanism_id,
+    }
+}
+
+fn terminal_safe(value: &str) -> String {
+    let mut output = String::with_capacity(value.len());
+    for scalar in value.chars() {
+        if scalar.is_control() || ('\u{7f}'..='\u{9f}').contains(&scalar) {
+            use std::fmt::Write as _;
+            write!(output, "\\u{{{:x}}}", u32::from(scalar))
+                .expect("writing to a String cannot fail");
+        } else {
+            output.push(scalar);
+        }
+    }
+    output
+}
+
+const fn observation_label(observation: ObservationKind) -> &'static str {
+    match observation {
+        ObservationKind::UnicodePropertyMembership => "Unicode property membership",
+        ObservationKind::UnicodeNormalizationDifference => "Unicode normalization difference",
+        ObservationKind::C2paTextManifestWrapper => "C2PA Appendix A.8 carrier",
+        ObservationKind::C2paManifestStore => "C2PA manifest store",
+        ObservationKind::C2paManifestValidation => "C2PA claim validation",
+        ObservationKind::C2paHardBinding => "C2PA hard binding",
+        ObservationKind::C2paCredentialTrust => "C2PA credential trust",
+        ObservationKind::StatisticalWatermarkDecision => "statistical watermark decision",
+        ObservationKind::ProviderTextWatermark => "provider text watermark",
+        ObservationKind::Unclassified => "unclassified observation",
+    }
+}
+
+const fn authority_label(authority: AuthorityClass) -> &'static str {
+    match authority {
+        AuthorityClass::Standard => "STANDARD",
+        AuthorityClass::PublicReference => "PUBLIC_REFERENCE",
+        AuthorityClass::PublicMechanismPrivateKey => "PUBLIC_MECHANISM_PRIVATE_KEY",
+        AuthorityClass::UndocumentedProvider => "UNDOCUMENTED_PROVIDER",
+        AuthorityClass::ProjectImplementation => "PROJECT_IMPLEMENTATION",
+        AuthorityClass::Unspecified => "UNSPECIFIED",
+    }
+}
+
+const fn verifier_availability_label(availability: VerifierAvailability) -> &'static str {
+    match availability {
+        VerifierAvailability::Available => "available",
+        VerifierAvailability::Unavailable => "unavailable in checked authority snapshot",
+    }
+}
+
+const fn reference_relationship_label(relationship: ReferenceRelationship) -> &'static str {
+    match relationship {
+        ReferenceRelationship::RelatedFamilyNotDeploymentParity => {
+            "related family; not deployment parity"
+        }
+    }
+}
+
+const fn inference_label(inference: InferenceId) -> &'static str {
+    match inference {
+        InferenceId::UnicodePropertyPresent => "unicode_property_present",
+        InferenceId::UnicodePropertyAbsentWithinScope => "unicode_property_absent_within_scope",
+        InferenceId::UnicodeNormalizationDifferencePresent => {
+            "unicode_normalization_difference_present"
+        }
+        InferenceId::UnicodeNormalizationDifferenceAbsentWithinScope => {
+            "unicode_normalization_difference_absent_within_scope"
+        }
+        InferenceId::C2paCarrierPresent => "c2pa_carrier_present",
+        InferenceId::C2paCarrierAbsentWithinScope => "c2pa_carrier_absent_within_scope",
+        InferenceId::C2paManifestStorePresent => "c2pa_manifest_store_present",
+        InferenceId::C2paManifestStoreAbsentWithinScope => {
+            "c2pa_manifest_store_absent_within_scope"
+        }
+        InferenceId::C2paClaimValid => "c2pa_claim_valid",
+        InferenceId::C2paHardBindingValid => "c2pa_hard_binding_valid",
+        InferenceId::C2paCredentialTrusted => "c2pa_credential_trusted",
+        InferenceId::ProviderMechanismFamilyDisclosed => "provider_mechanism_family_disclosed",
+        InferenceId::ProviderDetectorUnavailable => "provider_detector_unavailable",
+        InferenceId::PublicReferenceWatermarkPresent => "public_reference_watermark_present",
+        InferenceId::PublicReferenceWatermarkAbsentWithinConfiguration => {
+            "public_reference_watermark_absent_within_configuration"
+        }
+        InferenceId::ArtifactClean => "artifact_clean",
+        InferenceId::HumanAuthorship => "human_authorship",
+        InferenceId::AiAuthorship => "ai_authorship",
+        InferenceId::MaliciousIntent => "malicious_intent",
+        InferenceId::WatermarkPresent => "watermark_present",
+        InferenceId::WatermarkAbsent => "watermark_absent",
+        InferenceId::C2paClaimValidity => "c2pa_claim_validity",
+        InferenceId::C2paHardBinding => "c2pa_hard_binding",
+        InferenceId::C2paCredentialTrust => "c2pa_credential_trust",
+        InferenceId::Authorship => "authorship",
+        InferenceId::Truthfulness => "truthfulness",
+        InferenceId::ClaudeWatermarkPresent => "claude_watermark_present",
+        InferenceId::ClaudeWatermarkAbsent => "claude_watermark_absent",
+        InferenceId::ClaudeProviderParity => "claude_provider_parity",
     }
 }
 

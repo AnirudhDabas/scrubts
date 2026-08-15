@@ -5,6 +5,9 @@ check:
     cargo clippy --workspace --all-targets -- -D warnings
     cargo test --workspace
 
+prove:
+    python tools/prove.py
+
 waterlarp-check:
     waterlarp\.venv\Scripts\python.exe -m ruff check --config waterlarp\pyproject.toml waterlarp\src waterlarp\tests
     waterlarp\.venv\Scripts\python.exe -m mypy --config-file waterlarp\pyproject.toml waterlarp\src

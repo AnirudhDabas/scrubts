@@ -32,8 +32,24 @@ A report must represent:
 - evidence per nontrivial observation
 - limitations/assumptions when required for interpretation
 
-Exact field names may be proposed in Milestone 1, but semantic meaning must not
-contradict the ADRs.
+Schema 0.2 fixes these fields as `schema_version`, `tool`, `artifact`,
+`findings`, `limitations`, and `assumptions`. `artifact.path` is display context
+and contains only the input file name in ordinary CLI reports, not the input's
+absolute path.
+
+Every finding contains `mechanism`, `status`, `trace`, `evidence`,
+`limitations`, and `assumptions`. The typed trace records:
+
+- observation kind;
+- verifier identity, version, and availability;
+- mechanism, implementation, and detector authority classes;
+- authority source IDs and any related-reference boundary;
+- configuration identity where meaningful;
+- typed `supports` and `does_not_support` inference IDs;
+- a stable reproduction command template.
+
+The scanner/provider report construction path assigns this trace. Human,
+explain, and JSON renderers do not derive or upgrade authority.
 
 ## Determinism
 
@@ -45,10 +61,21 @@ contradict the ADRs.
   run metadata.
 - Human formatting may evolve independently from the versioned JSON contract.
 
+`Report::canonical_report_bytes` is the explicit semantic identity boundary.
+It excludes display paths and uses declaration-ordered Serde structs plus sorted
+collections. It contains no floating-point values, wall-clock time, host name,
+temporary path, terminal capability, or random identifier. This is scrub's
+project-specific deterministic JSON contract. It is not RFC 8785/JCS, and local
+repeatability does not establish cross-platform determinism.
+
 ## Stdout/stderr contract
 
 When `--json` is selected, stdout contains only the report JSON. Diagnostics,
 progress, and errors not represented in the report belong on stderr.
+
+`--json --explain` emits the same structured schema 0.2 report because the
+proof trace is always part of the authoritative report. It does not add a prose
+explanation field.
 
 ## Statistical detector extension requirements
 
@@ -72,3 +99,7 @@ The schema must not force every deterministic scanner to populate these fields.
 
 Schema changes that alter field meaning require a schema-version change or an
 explicit compatibility decision recorded in an ADR.
+
+The Draft 2020-12 consumer contract is
+`schemas/report-0.2.schema.json`. Schema 0.1 reports are not silently decoded as
+0.2.

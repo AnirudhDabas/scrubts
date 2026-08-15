@@ -76,8 +76,15 @@ fn real_inspection_path_matches_the_complete_fixture_corpus() {
             .strip_suffix('\n')
             .expect("JSON output has one trailing newline");
         assert!(!json.contains('\n'), "{} JSON is one line", fixture.name);
-        let report = Report::from_json(json).expect("stdout is a report");
-        assert_eq!(report.findings().len(), 9, "{} finding count", fixture.name);
+        let report = Report::from_json(json)
+            .expect("stdout is an untrusted report")
+            .into_report();
+        assert_eq!(
+            report.findings().len(),
+            10,
+            "{} finding count",
+            fixture.name
+        );
         let finding = report
             .findings()
             .iter()
@@ -160,13 +167,15 @@ fn malformed_utf8_carried_across_read_boundary_invalidates_prefix_evidence() {
         .expect("JSON output has one trailing newline");
     assert!(!json.contains('\n'), "JSON report must occupy one line");
 
-    let report = Report::from_json(json).expect("stdout is a report");
+    let report = Report::from_json(json)
+        .expect("stdout is an untrusted report")
+        .into_report();
     assert_eq!(report.artifact().byte_length(), 196_608);
     assert_eq!(
         report.artifact().content_sha256().as_str(),
         scrub_report::Sha256Digest::from_bytes(expected_digest).as_str()
     );
-    assert_eq!(report.findings().len(), 9);
+    assert_eq!(report.findings().len(), 10);
     let finding = report
         .findings()
         .iter()

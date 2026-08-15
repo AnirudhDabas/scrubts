@@ -57,7 +57,9 @@ fn report(path: &Path) -> (Report, String) {
     );
     assert!(output.stderr.is_empty());
     let raw = String::from_utf8(output.stdout).expect("JSON stdout is UTF-8");
-    let report = Report::from_json(raw.trim_end()).expect("stdout is a report");
+    let report = Report::from_json(raw.trim_end())
+        .expect("stdout is an untrusted report")
+        .into_report();
     (report, raw)
 }
 
@@ -781,7 +783,8 @@ fn hostile_ambient_settings_and_neighbor_sidecar_have_zero_effect() {
             .expect("stdout is UTF-8")
             .trim_end(),
     )
-    .expect("stdout is a report");
+    .expect("stdout is an untrusted report")
+    .into_report();
     assert_eq!(
         finding(&report, "c2pa.manifest_store").status(),
         FindingStatus::Absent
@@ -803,7 +806,7 @@ fn repeated_json_is_byte_identical_and_human_success_stderr_is_empty() {
     assert!(human.status.success());
     assert!(human.stderr.is_empty());
     let output = String::from_utf8(human.stdout).expect("human stdout is UTF-8");
-    assert!(output.contains("mechanism: c2pa.manifest_store (C2PA 2.4)"));
+    assert!(output.contains("C2PA     PRESENT      manifest store"));
     assert!(!output.contains("C2PA: yes"));
     assert!(!output.contains("AI detected"));
 }

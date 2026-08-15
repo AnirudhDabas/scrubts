@@ -1,0 +1,59 @@
+{
+  "$schema": "https://json-schema.org/draft/2020-12/schema",
+  "$id": "https://scrubts.dev/schemas/claims-0.1.schema.json",
+  "title": "scrub public claim ledger 0.1",
+  "type": "object",
+  "additionalProperties": false,
+  "required": ["schema_version", "claims"],
+  "properties": {
+    "schema_version": { "const": "0.1" },
+    "claims": {
+      "type": "array",
+      "minItems": 1,
+      "items": { "$ref": "#/$defs/claim" }
+    }
+  },
+  "$defs": {
+    "claim": {
+      "type": "object",
+      "additionalProperties": false,
+      "required": ["claim_id", "claim_text", "claim_class", "status", "evidence_artifacts", "authority_source_ids", "reproduce_command", "expected_result", "limitations"],
+      "properties": {
+        "claim_id": { "type": "string", "pattern": "^[a-z0-9]+(?:[._-][a-z0-9]+)*$" },
+        "claim_text": { "type": "string", "minLength": 1 },
+        "claim_class": { "enum": ["vendor_reported", "replicated", "measured", "inferred", "unknown"] },
+        "status": { "enum": ["established", "unknown"] },
+        "evidence_artifacts": { "$ref": "#/$defs/paths" },
+        "authority_source_ids": { "$ref": "#/$defs/strings" },
+        "reproduce_command": {
+          "type": "array",
+          "minItems": 1,
+          "items": { "type": "string", "minLength": 1 }
+        },
+        "expected_result": { "type": "string", "minLength": 1 },
+        "limitations": { "$ref": "#/$defs/strings" }
+      },
+      "allOf": [
+        {
+          "if": { "properties": { "claim_class": { "const": "unknown" } }, "required": ["claim_class"] },
+          "then": { "properties": { "status": { "const": "unknown" } } }
+        },
+        {
+          "if": { "properties": { "status": { "const": "unknown" } }, "required": ["status"] },
+          "then": { "properties": { "claim_class": { "const": "unknown" } } }
+        }
+      ]
+    },
+    "strings": {
+      "type": "array",
+      "items": { "type": "string", "minLength": 1 },
+      "uniqueItems": true
+    },
+    "paths": {
+      "type": "array",
+      "minItems": 1,
+      "items": { "type": "string", "minLength": 1 },
+      "uniqueItems": true
+    }
+  }
+}
