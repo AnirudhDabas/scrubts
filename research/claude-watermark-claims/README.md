@@ -108,6 +108,5 @@ The remaining sampled pages and exact capture identities are listed in
 
 This is a time-bounded convenience sample, not a prevalence estimate. Static
 capture does not reveal undisclosed server-side behavior or private authorized
-access. The existing explain renderer also concatenates `does not support` with
-its first inference; raw JSON remains unambiguous. That presentation issue is
-deferred and no report semantics are changed here.
+access. The audit classifies individual captured claims, not whole publishers,
+services, or repositories.

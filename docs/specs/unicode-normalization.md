@@ -2,11 +2,13 @@
 
 ## Scope and support boundary
 
-This contract defines what future deterministic inspection may report about a
-complete byte artifact interpreted as UTF-8 under Unicode 17.0.0 normalization.
-It does not establish production support. Production support remains absent
-until the official conformance oracle, curated fixtures, implementation, and
-`CONFORMANCE.md` entry are complete.
+This contract defines what deterministic inspection reports about a complete
+byte artifact interpreted as UTF-8 under Unicode 17.0.0 normalization. scrub
+ships the two NFC/NFKC difference findings below using
+`unicode-normalization` 0.1.25. The supported statuses, evidence, complete-input
+boundary, 4,780,592-comparison oracle result, and known limitations are recorded
+durably in [`CONFORMANCE.md`](../../CONFORMANCE.md) and the
+[`evidence index`](../../evidence/README.md).
 
 The two public mechanism identifiers are:
 
@@ -271,7 +273,7 @@ assignment status can differ across Unicode versions.
 
 ## Streaming and buffering boundary
 
-Later production code must be correct for arbitrary `Read::read` partitioning.
+Production code must be correct for arbitrary `Read::read` partitioning.
 A normalization-relevant sequence can cross a short test partition, a decoder
 callback boundary, or the real 65,536-byte inspection boundary. Chunk-local
 normalization is prohibited by the complete-sequence and concatenation
@@ -286,12 +288,12 @@ original. scrub.ts must not silently impose Stream-Safe Text, insert CGJ, or
 otherwise change the interpreted sequence.
 
 The contract therefore promises no constant-memory bound for arbitrary valid
-Unicode normalization. A later implementation may use a growable unresolved
-normalization segment or another conformant incremental design. The finding
-must be based on the same complete artifact bytes whose identity is reported,
-and arbitrary read partitioning must not change the result. Exact read count,
-buffering, architecture, and resource policy are deferred until after the
-oracle is frozen.
+Unicode normalization. The shipped implementation fallibly buffers the whole
+valid input and compares lazy NFC and NFKC iterator output without constructing
+complete normalized strings. The finding is based on the same complete artifact
+bytes whose identity is reported, and arbitrary read partitioning does not
+change the result. Pathological canonical segments retain input-dependent
+memory and work.
 
 ## Official conformance oracle
 
@@ -323,18 +325,18 @@ Independent parsing yields 299,448 assigned code points and 17,086 unique Part
 1 source code points. Their complete set difference has 282,362 code points:
 2,048 surrogates and 280,314 Unicode scalar values.
 
-Milestone 4B must:
+The committed independent oracle:
 
-1. exercise every one of the 20,034 literal data records and every
+1. exercises every one of the 20,034 literal data records and every
    header-defined transformation relationship for all four forms;
-2. derive the complete assigned-code-point set from the pinned
+2. derives the complete assigned-code-point set from the pinned
    `DerivedAge.txt` and subtract the code points appearing as Part 1 source
    values;
-3. preserve the distinction between the full normative assigned-code-point
+3. preserves the distinction between the full normative assigned-code-point
    complement and scrub.ts's executable valid-UTF-8 domain;
-4. exhaustively exercise every assigned Unicode scalar value in that complement
+4. exhaustively exercises every assigned Unicode scalar value in that complement
    through NFC, NFD, NFKC, and NFKD; and
-5. record that the 2,048 assigned surrogate code points are in the broader
+5. records that the 2,048 assigned surrogate code points are in the broader
    complement but cannot occur in a well-formed UTF-8 scrub artifact.
 
 Scalar-only execution does not by itself establish an unqualified UAX #15
@@ -343,12 +345,12 @@ conformance claim over surrogate-containing code-point sequences.
 Unassigned code points are not thereby invalid. For the pinned Unicode version,
 they use the applicable default normalization-property behavior. A valid UTF-8
 artifact containing an unassigned Unicode scalar value remains valid artifact
-input. Milestone 4B must derive and document its exhaustive unassigned-scalar
-test obligation and expected behavior from the pinned UAX #15/UAX #44 and UCD
-defaults; this contract does not invent an assigned-characters-only product
-restriction or expand into a Normalization Process for Stabilized Strings.
+input. The oracle derives exhaustive unassigned-scalar obligations and expected
+behavior from the pinned UAX #15, UAX #44, and UCD defaults; scrub does not
+invent an assigned-characters-only product restriction or expand into a
+Normalization Process for Stabilized Strings.
 
-Milestone 4B must add
+The repository includes
 `crates/scrub/tests/fixtures/NormalizationTest-17.0.0.txt` as an unconditional,
 verbatim copy of the complete pinned official file. The existing fixture-area
 Unicode License V3 notice supplies the required license attribution, and the
@@ -360,17 +362,26 @@ remain an independent source-parity input.
 Literal expected normalized sequences come only from the official columns. No
 normalization implementation or library may generate, rewrite, fill, or replace
 them, including a second normalization library. The oracle must not import
-production normalization helpers, and production code must not import oracle
-helpers. Curated expected public findings must be frozen independently rather
-than generated by executing production code. Milestone 4B must not add a
-compression or decompression dependency merely for this oracle. A small set of
+production normalization helpers, and production code does not import oracle
+helpers. Curated expected public findings are frozen independently rather than
+generated by executing production code. The oracle adds no compression or
+decompression dependency. A small set of
 hand-selected examples or a sample of the 20,034 records cannot substitute for
 the complete official suite.
 
-The curated artifact corpus has a different purpose and is also required. It
-must freeze exact public statuses and evidence, hostile-input behavior,
-artifact identity, partition invariance, and non-modification. Its required
-categories are recorded in `docs/plans/0004-unicode-normalization.md`.
+The curated artifact corpus has a different purpose and freezes exact public
+statuses and evidence, hostile-input behavior, artifact identity, partition
+invariance, and non-modification. Its categories cover empty and ASCII input;
+already-normalized multilingual text; canonical accents, combining reordering,
+blocked composition, and Hangul; ligature, fullwidth, superscript, circled, and
+NFC-identity/NFKC-difference compatibility cases; multibyte BMP and
+supplementary prefixes; exact and truncated eight-scalar divergence windows;
+compatibility contraction; variation-selector and emoji neutrality; short and
+real 65,536-byte boundaries; adjacent sensitive sequences; long non-starter
+runs; established malformed UTF-8 forms, including boundary and late failures;
+complete trailing-byte identity after invalidity; repeated deterministic
+evidence; and input preservation. Expectations cover both findings separately,
+including both absent, both present, and NFC absent while NFKC is present.
 
 ## Downstream boundaries
 
@@ -388,21 +399,13 @@ UTF-8 bytes. This note does not implement C2PA, does not make C2PA an authority
 for normalization, and does not imply that every variation-selector sequence
 is C2PA data.
 
-## Deliberately deferred implementation decisions
+## Implemented production boundary
 
-Milestone 4A selects no production normalization architecture or dependency.
-A later implementation milestone must decide and record:
-
-- the conformant incremental segmentation/buffering strategy and integration
-  with the existing push-based UTF-8 decoder;
-- how hashing, NFC, NFKC, scalar comparison, and first-difference evidence
-  operate over the same complete artifact bytes;
-- resource and overflow error types, wording, policies, and plumbing for
-  pathological but valid input, subject to the status invariant above;
-- whether the `unicode-normalization` crate is suitable, including exact
-  release/revision, Unicode version, license, maintenance, conformance, and
-  iterator/streaming behavior;
-- how production testing remains genuinely independent from its oracle and
-  does not use the same normalization implementation to create expected data.
-
-No dependency is approved by this contract.
+Production uses exact `unicode-normalization` 0.1.25, crates.io checksum
+`5fd4f6878c9cb28d874b009da9e8d183b5abc80117c40bbd187a1fde336be6e8`,
+with its public Unicode version fixed at 17.0.0. Hashing, NFC, NFKC, scalar
+comparison, and bounded first-difference evidence all derive from the complete
+artifact bytes retained by the inspection path. Resource or arithmetic failure
+fails the command rather than becoming a finding. The production implementation
+and official oracle remain separate: neither imports the other's helpers or
+generates the other's expected values.

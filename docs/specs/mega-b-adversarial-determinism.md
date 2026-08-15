@@ -1,4 +1,4 @@
-# Mega B adversarial and determinism evidence
+# Adversarial and determinism evidence
 
 ## Streaming invariant
 
@@ -70,9 +70,16 @@ cargo +nightly-2026-08-14 fuzz run report_json_import -- -max_total_time=3600
 cargo +nightly-2026-08-14 fuzz run human_output_escape -- -max_total_time=3600
 ```
 
-cargo-fuzz/libFuzzer does not support native Windows. Mega B does not require
-WSL, does not claim a local Windows fuzz run, and keeps fuzz smoke out of
+cargo-fuzz/libFuzzer does not support native Windows. The contract does not
+require WSL, does not claim a local Windows fuzz run, and keeps fuzz smoke out of
 ordinary `just prove`.
+
+Historically, all three pinned targets completed their bounded Linux smoke
+campaigns without a discovered crash at revision
+`a47994e334aecb868c5f0b07a2cf97da8b09950f` in
+[run 31888143927](https://github.com/AnirudhDabas/scrubts/actions/runs/31888143927).
+That is scoped bug-finding evidence, not proof that bugs are absent and not a
+current-HEAD result.
 
 ## External C2PA corpus replay
 
@@ -100,7 +107,7 @@ python tools/c2pa_replay.py --check
 ## Selected c2pa-attacks contract
 
 The source is `contentauth/c2pa-attacks` commit
-`4f750daa888d2ff93a1659fc016be584dc43ae5c`, MIT OR Apache-2.0. Mega B selects
+`4f750daa888d2ff93a1659fc016be584dc43ae5c`, MIT OR Apache-2.0. This contract selects
 one exact `attacks/rendering.attack` line, `Back<0x08>Space`. The replay replaces
 the unique equal-length `signed-png` title in the pinned generated PNG and
 changes no other bytes.
@@ -143,9 +150,18 @@ cargo run --offline --locked -p scrub --example determinism -- --manifest eviden
 ```
 
 Workflow source and a local Windows result do not establish cross-platform
-equality. Until a real three-OS comparison artifact reports `ESTABLISHED`,
-cross-platform semantic determinism is **NOT YET ESTABLISHED** and has no
-default claim-ledger row.
+equality. A scoped historical execution does: at revision
+`a47994e334aecb868c5f0b07a2cf97da8b09950f`, GitHub Actions
+[run 31887807602](https://github.com/AnirudhDabas/scrubts/actions/runs/31887807602)
+reported `ESTABLISHED` for identical canonical semantic reports on Windows,
+Linux, and macOS across the four frozen fixtures. The downloaded matrix was
+independently regenerated from all three platform artifacts; exact artifact and
+semantic digests are retained in
+[`evidence/determinism-run-31887807602.json`](../../evidence/determinism-run-31887807602.json).
+This does not generalize to current HEAD, other artifacts, arbitrary platforms,
+or compiler-output reproducibility. Cross-platform equality remains outside the
+default claim ledger because `just prove` does not rerun that historical CI
+execution.
 
 ## Proof and mutation boundaries
 
@@ -155,7 +171,7 @@ test, evidence, schema, tool, fuzz, workflow, and focused documentation files.
 Unrelated human-owned files and ignored build/fuzz artifacts are excluded.
 
 The default ledger includes deterministic streaming, terminal, external-corpus,
-and selected-adversarial rows. Fuzz execution remains in its bounded CI lane.
-Cross-platform equality remains pending. `cargo-mutants` was not installed on
+and selected-adversarial rows. Fuzz execution and the scoped historical
+cross-platform result remain separate CI evidence. `cargo-mutants` was not installed on
 the authoring host, and no global-tool installation was authorized, so targeted
-mutation testing is explicitly deferred without blocking Mega B.
+mutation testing was outside the bounded evidence run.

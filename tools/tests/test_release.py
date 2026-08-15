@@ -145,6 +145,19 @@ class ReleaseContractTests(unittest.TestCase):
             ):
                 release.validate_version_contract(malformed)
 
+    def test_release_cli_validates_reviewed_license_bundle_first(self) -> None:
+        with mock.patch.object(
+            release,
+            "validate_third_party_license_bundle",
+            side_effect=release.ReleaseError("third-party license bundle is invalid"),
+        ) as validate_bundle:
+            stderr = io.StringIO()
+            with mock.patch("sys.stderr", stderr):
+                result = release.main(["validate-version", "--preflight"])
+        self.assertEqual(result, 2)
+        validate_bundle.assert_called_once_with()
+        self.assertIn("third-party license bundle is invalid", stderr.getvalue())
+
     def test_exact_byte_release_sources_are_not_git_text_paths(self) -> None:
         completed = subprocess.run(
             ["git", "check-attr", "text", "--", *release.RELEASE_SOURCE_BYTE_PATHS],
@@ -166,6 +179,7 @@ class ReleaseContractTests(unittest.TestCase):
         committed = {
             "Cargo.lock": b"version = 4\n",
             "LICENSE": b"license line\n",
+            "THIRD_PARTY_LICENSES.txt": b"third-party license text\n",
             "THIRD_PARTY_NOTICES.md": b"notice line\n",
         }
         for path, value in committed.items():
@@ -225,6 +239,7 @@ class ReleaseContractTests(unittest.TestCase):
         source_bytes = {
             "Cargo.lock": b"version = 4\r\n",
             "LICENSE": b"license CRLF\r\nlicense LF\n",
+            "THIRD_PARTY_LICENSES.txt": b"third-party CRLF\r\nthird-party LF\n",
             "THIRD_PARTY_NOTICES.md": b"notices CRLF\r\nnotices LF\n",
         }
         for path in source_bytes:
@@ -250,6 +265,10 @@ class ReleaseContractTests(unittest.TestCase):
         archive_root = f"scrub-v0.1.0-{release.TARGETS[0]}"
         self.assertEqual(
             inspected.members[f"{archive_root}/LICENSE"], source_bytes["LICENSE"]
+        )
+        self.assertEqual(
+            inspected.members[f"{archive_root}/THIRD_PARTY_LICENSES.txt"],
+            source_bytes["THIRD_PARTY_LICENSES.txt"],
         )
         self.assertEqual(
             inspected.members[f"{archive_root}/THIRD_PARTY_NOTICES.md"],
@@ -351,14 +370,40 @@ class ReleaseContractTests(unittest.TestCase):
     def test_archive_member_missing_and_extra_are_rejected(self) -> None:
         metadata = self.metadata()
         archive_root, members = release.archive_members(metadata, self.binary.read_bytes())
+        for label, suffix in (
+            ("missing project license", "/LICENSE"),
+            ("missing third-party licenses", "/THIRD_PARTY_LICENSES.txt"),
+            ("missing third-party notices", "/THIRD_PARTY_NOTICES.md"),
+        ):
+            with self.subTest(label=label):
+                changed = {name: value for name, value in members.items() if not name.endswith(suffix)}
+                archive = self.directory / release.expected_archive_name("0.1.0", release.TARGETS[0])
+                release.write_zip(archive, archive_root, changed)
+                with self.assertRaisesRegex(release.ReleaseError, "archive members disagree"):
+                    release.inspect_archive(archive)
         for label, changed in (
-            ("missing", {name: value for name, value in members.items() if not name.endswith("/LICENSE")}),
             ("extra", {**members, f"{archive_root}/unexpected.txt": (b"unexpected", 0o644)}),
         ):
             with self.subTest(label=label):
                 archive = self.directory / release.expected_archive_name("0.1.0", release.TARGETS[0])
                 release.write_zip(archive, archive_root, changed)
                 with self.assertRaisesRegex(release.ReleaseError, "archive members disagree"):
+                    release.inspect_archive(archive)
+
+    def test_changed_license_bundle_and_notices_are_rejected(self) -> None:
+        metadata = self.metadata()
+        archive_root, members = release.archive_members(metadata, self.binary.read_bytes())
+        cases = (
+            ("THIRD_PARTY_LICENSES.txt", "license bundle"),
+            ("THIRD_PARTY_NOTICES.md", "notices"),
+        )
+        for filename, message in cases:
+            with self.subTest(filename=filename):
+                changed = dict(members)
+                changed[f"{archive_root}/{filename}"] = (b"changed\n", 0o644)
+                archive = self.directory / release.expected_archive_name("0.1.0", release.TARGETS[0])
+                release.write_zip(archive, archive_root, changed)
+                with self.assertRaisesRegex(release.ReleaseError, message):
                     release.inspect_archive(archive)
 
     def test_oversized_archive_member_is_rejected_before_decompression(self) -> None:
@@ -660,6 +705,42 @@ class ReleaseContractTests(unittest.TestCase):
         self.assertIn('test "$(git rev-list -n 1', workflow)
         self.assertNotRegex(workflow, r"gh release (?:edit|create)[^\n]*--draft=false")
         self.assertNotIn("gh release create --generate-notes", workflow)
+
+    def test_release_workflow_exact_source_core_gate_blocks_output_jobs(self) -> None:
+        workflow = (ROOT / ".github" / "workflows" / "release.yml").read_text(
+            encoding="utf-8"
+        )
+
+        def job_block(name: str) -> str:
+            match = re.search(
+                rf"^  {re.escape(name)}:\n(?P<body>(?:^(?:    |\s*$).*\n?)*)",
+                workflow,
+                flags=re.MULTILINE,
+            )
+            self.assertIsNotNone(match, name)
+            assert match is not None
+            return match.group("body")
+
+        core = job_block("core-gate")
+        self.assertIn("needs: validate-source", core)
+        self.assertIn("ref: ${{ github.sha }}", core)
+        self.assertIn('test "$(git rev-parse HEAD)" = "$GITHUB_SHA"', core)
+        self.assertIn('cargo +"$RUST_TOOLCHAIN" fmt --check', core)
+        self.assertIn(
+            'cargo +"$RUST_TOOLCHAIN" clippy --locked --workspace --all-targets -- -D warnings',
+            core,
+        )
+        self.assertIn('cargo +"$RUST_TOOLCHAIN" test --locked --workspace', core)
+        self.assertIn("permissions:\n      contents: read", core)
+        self.assertNotIn("contents: write", core)
+        self.assertNotIn("id-token: write", core)
+        for name in ("preflight-build", "tag-build-and-attest"):
+            self.assertIn("- core-gate", job_block(name), name)
+        assemble = job_block("assemble")
+        self.assertIn("needs.core-gate.result == 'success'", assemble)
+        self.assertIn("- core-gate", assemble)
+        self.assertIn("needs: assemble", job_block("create-draft-release"))
+        self.assertIn("if: github.event_name == 'workflow_dispatch'", job_block("preflight-build"))
 
 
 if __name__ == "__main__":

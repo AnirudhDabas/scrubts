@@ -3,61 +3,40 @@
 **See what your model left behind.<br>
 Know what it proves.**
 
-AI models and tools can leave invisible Unicode, statistical watermark signal,
-or signed file provenance. Those are different kinds of evidence. `scrub`
-inspects a local artifact, keeps each observation attached to its verifier and
-authority, and stops where the evidence stops. It does not turn “I found an
-invisible character” into “Claude wrote this,” or an unavailable provider
-detector into a clean verdict.
+scrub inspects machine-readable evidence in AI-generated text and files, then
+keeps the observation separate from what its verifier and authority actually
+permit you to conclude. Invisible Unicode, statistical watermark signal, and
+signed provenance can all be real while supporting very different claims.
 
-This is a contiguous excerpt from the current default output for a
-project-created file containing one U+200B ZERO WIDTH SPACE:
-
-```console
-Observations
-
-  Unicode
-    PRESENT         Default_Ignorable_Code_Point
-      evidence          U+200B at byte offset 4, scalar offset 4
-
-  C2PA
-    ABSENT          text manifest wrapper
-
-  Claude
-    UNKNOWN         embedded text watermark
-      verifier          anthropic.provider_detector
-                        unavailable in checked authority snapshot
-      reference         reference.synthid_text
-                        related family; not deployment parity
-      supports          mechanism family disclosed; provider detector unavailable
-      does not support  Claude watermark presence/absence or provider parity
-
-Interpretation
-  A Unicode PRESENT finding supports only its reported Unicode observation.
-  It does not establish an Anthropic watermark, Claude involvement, or authorship.
-  UNKNOWN != ABSENT / CLEAN.
-  No aggregate authorship or artifact-clean verdict is reported.
-  Use --explain for the complete evidence and authority chain.
-```
-
-The Unicode observation is real. The Claude conclusion is not available. That
-difference is the point: **detection is not interpretation**, and
-**unknown is not clean**.
-
-## Why this exists
+## A real signal can support the wrong conclusion
 
 Anthropic's [current primary description](https://www.anthropic.com/news/claude-text-watermark),
-checked on 2026-08-15, says future Claude models will generate watermarked text.
-It describes a statistical SynthID-Text-family mechanism with no hidden
-characters. Provider detection depends on Anthropic's key, and the detection
-API remains described as coming “soon” while implementation details are being
-worked out. Public “Claude watermark detection” claims already exist, so scrub
-audited a bounded convenience sample to separate observations from
-provider-level inference.
+checked on 2026-08-15, describes its text watermark as statistical and in the
+SynthID Text family. It says there are no hidden characters, detection depends
+on Anthropic's key, and its provider detection API is still forthcoming while
+implementation details are worked out.
+
+Against that authority, scrub's [time-bounded claims audit](research/claude-watermark-claims/README.md)
+records individual public claims, including a provider-level Claude inference
+based on a fixed invisible-Unicode scan and a "100% Claude detection" assertion
+without exposed detector, evaluation, threshold, or result evidence supporting
+the number. The audit does not estimate prevalence or classify whole
+publishers.
+
+The counterexamples matter just as much: some tools limit themselves correctly
+to Unicode cleanup, public SynthID reference implementations are legitimate
+under their disclosed configurations, and some tools explicitly refuse to
+certify a provider-detector result. scrub is not anti-watermark or
+anti-Anthropic. The finding is narrower: **a signal can be real while the
+conclusion outruns its authority.**
+
+| **16 claims / 16 executable proof paths** | **4,780,592** | **3 OS / 4 frozen fixtures** |
+| --- | --- | --- |
+| Machine-readable ledger, fail-closed runner, and `UNKNOWN` allowed to survive | Independent Unicode normalization oracle comparisons | Identical canonical semantic reports on Windows, Linux, and macOS in historical [run 31887807602](https://github.com/AnirudhDabas/scrubts/actions/runs/31887807602) at revision `a47994e...`; not a universal guarantee |
 
 ## Quick start
 
-Install `scrub` from source. The repository pins Rust 1.97.1 in
+The verified install path is from source. Rust 1.97.1 is pinned in
 [`rust-toolchain.toml`](rust-toolchain.toml).
 
 ```console
@@ -68,7 +47,7 @@ cargo install --path crates/scrub --locked
 scrub inspect <artifact>
 ```
 
-Once installed, the three report projections are:
+The three projections are:
 
 ```console
 scrub inspect <artifact>
@@ -76,124 +55,86 @@ scrub inspect <artifact> --explain
 scrub inspect <artifact> --json
 ```
 
-Default output is the concise reading. `--explain` exposes each observation,
-verifier, authority, configuration, supported inference, forbidden inference,
-limitation, and reproduction template. `--json` emits the typed schema 0.2
-report without human headings or diagnostics on stdout. Inspection is local,
-does not modify the artifact, and does not fetch remote manifests or provider
-results. `scrub --help`, `scrub inspect --help`, and `scrub --version` describe
-the installed command. See the [product contract](docs/specs/product-proof.md)
-for the exact projection rules.
+Default output is the concise reading. `--explain` exposes verifier,
+authority, configuration, supported and forbidden inferences, limitations, and
+reproduction. `--json` emits only the typed schema 0.2 report on stdout.
+Inspection is local, does not modify the artifact, and does not fetch remote
+manifests or provider results. No crates.io or public native release is implied
+by this source install.
 
-## Claude watermark claims audit
+## Controlled falsification example
 
-scrub's [audit](research/claude-watermark-claims/README.md) asks what a
-**bounded, time-bounded convenience sample** actually observes and what
-authority its conclusions require. It is not a web census or prevalence
-estimate. Its seven claim records cover six public pages, tools, and
-repositories. At capture time, the sample included:
+A text fixture with one zero-width space demonstrates the boundary directly.
+These are selected, non-contiguous lines from current default output:
 
-- a provider-level, Claude-identification inference built from a fixed
-  invisible-Unicode observation;
-- a 100% Claude-detection assertion without exposed detector, evaluation,
-  threshold, or result evidence supporting that number.
+```console
+  Unicode
+    PRESENT         Default_Ignorable_Code_Point
+      evidence          U+200B at byte offset 4, scalar offset 4
+  Claude
+    UNKNOWN         embedded text watermark
+      verifier          anthropic.provider_detector
+                        unavailable in checked authority snapshot
+      reference         reference.synthid_text
+                        related family; not deployment parity
+  UNKNOWN != ABSENT / CLEAN.
+```
 
-The sample also contains accurately limited Unicode-cleanup claims, legitimate
-public SynthID mechanism and reference implementations, and tools that
-correctly refuse to claim provider-detector certification. The records classify
-individual claims, not whole publishers: a page can state one boundary
-correctly and overreach elsewhere.
+scrub refuses to transform an arbitrary observable Unicode signal into a
+provider or authorship conclusion. The fixture is not an Anthropic watermark
+simulation; it is a controlled check that Unicode `PRESENT` and Claude
+`UNKNOWN` remain separate.
 
-**Observable signal != provider verification != authorship.**
-
-## The evidence model
+## Evidence, not a verdict
 
 ```text
 OBSERVATION -> VERIFICATION -> AUTHORITY -> SUPPORTED INFERENCE
                                       \-> UNSUPPORTED INFERENCE
 ```
 
-Finding U+200B supports “this artifact contains a Unicode 17.0.0
-`Default_Ignorable_Code_Point`.” It does not support “Anthropic watermark
-present” or “Claude authored this.”
-
-A public SynthID implementation can support a result under its disclosed,
-pinned configuration. That result does not automatically support Anthropic
-deployment parity, a private provider result, or Claude authorship. The closed
-status vocabulary and upgrade rules are defined in
-[ADR 0001](docs/adr/0001-evidence-status-model.md) and the
-[report schema contract](docs/specs/report-schema.md).
-
-## `just prove`
+Every public claim has a row in [`evidence/claims.json`](evidence/claims.json).
+Run the offline proof paths with:
 
 ```console
 just prove
 ```
 
-The repository's public claims have executable proof paths. The current
-[machine-readable ledger](evidence/claims.json) contains 16 claims; the proof
-orchestrator runs every required offline oracle and fails closed if one does not
-pass. A passing Anthropic boundary oracle means the repository preserved
-`UNKNOWN` correctly—it is not a negative provider result.
+The command executes all required oracles, fails closed, and writes a proof
+artifact that binds the base revision plus changed proof-relevant source. A
+passing Anthropic boundary oracle means scrub preserved `UNKNOWN`; it is not a
+negative provider result. [`evidence/README.md`](evidence/README.md) is the
+short map across claims, conformance, replay artifacts, historical CI evidence,
+release preflight, and WaterLARP.
 
-The generated proof records the base revision, tested source identity, claim
-and gate states, source revisions, fixture identities, and limitations. Read
-the [proof contract](docs/specs/product-proof.md#proof-command) before treating
-`PROOF_COMPLETE` as broader than the ledger. The command requires the pinned
-WaterLARP environment described in its [environment setup](waterlarp/README.md#environment).
+## What is under the surface
 
-## Under the hood
+- **Unicode.** Property membership and NFC/NFKC difference reporting are pinned
+  to Unicode 17.0.0. The complete normalization gate independently checks
+  official transformations plus assigned and unassigned scalar obligations.
+  Findings are inspection-only; normalization is not sanitization, provenance,
+  authorship, or watermark evidence.
 
-- **Correctness.** A typed semantic `Report` is the source for human, explain,
-  and JSON projections. Unicode properties and normalization are pinned to
-  Unicode 17.0.0; the normalization gate performs
-  [4,780,592 oracle comparisons](CONFORMANCE.md). Streaming tests require the
-  same report for every tested legal partition of identical bytes.
-
-- **Provenance.** C2PA carrier presence, manifest validation, hard binding,
-  credential trust, and authorship remain separate. scrub integrates pinned
-  `c2pa-rs`, replays a selected official C2PA corpus, and keeps a selected
-  adversarial rendering case under an explicit local oracle. These are
-  integration and semantic-layer results, not an independent cryptographic
+- **C2PA.** Presence, manifest validation, hard binding, credential trust, and
+  authorship are separate states. scrub integrates pinned `c2pa-rs`, replays a
+  selected official corpus, isolates ambient network and sidecar behavior, and
+  retains known SDK/time-basis limitations as `UNKNOWN` or `UNSUPPORTED`. This
+  is integration and semantic-layer evidence, not an independent cryptographic
   implementation or full C2PA 2.4 conformance claim.
 
-- **Hostile inputs.** Artifact-controlled terminal controls are rendered
-  visibly in human output. The independent fuzz workspace targets streaming
-  partition equivalence, report JSON import, and human-output escaping. At
-  revision `a47994e334aecb868c5f0b07a2cf97da8b09950f`, all three pinned targets
-  completed bounded Linux libFuzzer smoke campaigns without a discovered crash
-  in [run 31888143927](https://github.com/AnirudhDabas/scrubts/actions/runs/31888143927).
-  This is bounded bug-finding evidence, not proof that bugs are absent. The
-  exact envelope is documented in the
-  [adversarial and determinism contract](docs/specs/mega-b-adversarial-determinism.md).
+- **Hostile input and determinism.** Human output visibly escapes tested
+  terminal and bidi controls. Streaming tests compare canonical reports across
+  hostile legal read partitions. Three pinned fuzz targets have bounded Linux
+  smoke evidence; bounded fuzzing is bug-finding, not proof of bug absence. The
+  exact historical three-OS result and limitations are preserved in
+  [`evidence/determinism-run-31887807602.json`](evidence/determinism-run-31887807602.json).
 
-- **Reproducibility.** Proof artifacts bind the tested source state instead of
-  naming only a clean base commit. At revision
-  `a47994e334aecb868c5f0b07a2cf97da8b09950f`,
-  [run 31887807602](https://github.com/AnirudhDabas/scrubts/actions/runs/31887807602)
-  established identical canonical semantic reports on Windows, Linux, and
-  macOS for scrub's frozen four-fixture determinism set. This does not
-  generalize to current HEAD, other artifacts, or arbitrary cross-platform
-  equivalence; workflow source alone is only the contract.
-
-- **Release integrity.** The release contract defines fail-closed assembly for
-  Windows x64, Linux x64, macOS Apple Silicon, and macOS Intel archives, with
-  deterministic packaging and distinct checksum, build-attestation, immutable
-  release, and platform-signing layers. At revision
-  `24af24a72adc632852e5fd2114725b28bd3002f1`,
+- **Release integrity.** The release path constructs and verifies exact
+  deterministic archives for Windows x64, Linux x64, macOS Apple Silicon, and
+  macOS Intel, then assembles only a complete four-target set. Historical
   [preflight run 31892107877](https://github.com/AnirudhDabas/scrubts/actions/runs/31892107877)
-  passed source validation, all four native builds, and exact assembly of four
-  archives plus `release-manifest.json` and `SHA256SUMS`; independently
-  downloaded archive hashes matched both records. `tag-build-and-attest` and
-  `create-draft-release` were correctly skipped. This is historical preflight
-  evidence, not a current-HEAD preflight, tag attestation, public or immutable
-  release, or platform-signing result. See
-  [release integrity](docs/specs/mega-c-release-integrity.md).
-
-- **Research.** Public KGW and SynthID reference parity, calibration, evidence
-  length, threshold semantics, and provider/public-reference separation live
-  in WaterLARP. The bounded Claude claims audit is a separate claim-authority
-  artifact. Neither is promoted into a universal AI detector.
+  at revision `24af24a...` passed all four native builds and exact assembly.
+  That is not a current-HEAD result, tag attestation, published or immutable
+  release, reproducible compiler build, or platform-signing result.
 
 ## C2PA is a ladder, not a badge
 
@@ -201,36 +142,24 @@ WaterLARP environment described in its [environment setup](waterlarp/README.md#e
 presence != validity != hard binding != trust != authorship
 ```
 
-A C2PA store can be present while later assurance layers are invalid,
-unknown, unsupported, or not applicable. A valid hard binding establishes that
-the applicable signed claim is bound to the inspected bytes under C2PA rules.
-It does not establish that the claim is true, that a trusted identity signed
-it, or that a human or AI authored the content. scrub v0.1 configures no pinned
-C2PA trust policy. The bounded behavior and known SDK limitations are in the
-[C2PA inspection contract](docs/specs/c2pa-provenance.md).
+A valid hard binding establishes that an applicable signed claim is bound to
+the inspected bytes under C2PA rules. It does not establish that the claim is
+true, that a trusted identity signed it, or that a human or AI authored the
+content. scrub v0.1 configures no pinned C2PA trust policy. The bounded behavior
+is in the [C2PA inspection contract](docs/specs/c2pa-provenance.md).
 
 ## WaterLARP
 
-**WaterLARP: Detector Authority, Calibration, and Survivability in Text
-Watermarking** is the separate research methodology behind scrub's statistical
-work. It keeps generation, calibration, held-out evaluation, detector evidence,
-threshold identity, and source authority in machine-readable artifacts.
+WaterLARP is the separate authority-aware research harness for public KGW and
+SynthID Text baselines. It preserves exact generation, calibration, detector,
+key, threshold, evidence-length, operation, and source identities. In
+particular, it distinguishes a threshold frozen on clean negatives from a
+threshold calibrated on separately transformed negatives; those answer
+different survivability questions.
 
-Its central operational distinction is:
-
-- `fixed_clean_threshold`: freeze a threshold calibrated on clean negatives,
-  then measure whether detection persists after an operation;
-- `operation_conditioned_threshold`: calibrate on separately transformed
-  negatives, then evaluate independently transformed held-out positives and
-  negatives under the same operation contract.
-
-Those answer different questions. “The watermark stopped working at the
-original operating point” can differ from “the statistical signal ceased to
-exist after accounting for the shifted input distribution.”
-
-Current WaterLARP is **methodology and integration evidence**. Its CPU pilot has
-tiny N and is explicitly not benchmark, provider, authorship, Claude, Gemini,
-SOTA, or paper-scale evidence. The powered empirical study is future work. See
+Current WaterLARP is methodology and integration evidence. Its CPU pilot has
+tiny N and is not benchmark, provider, authorship, Claude, Gemini, SOTA, or
+paper-scale evidence. The powered empirical study has not been executed. See
 the [research specification](docs/specs/waterlarp.md) and
 [harness documentation](waterlarp/README.md).
 
@@ -238,38 +167,22 @@ the [research specification](docs/specs/waterlarp.md) and
 
 - `UNKNOWN` is not `ABSENT`, `CLEAN`, or evidence of human authorship.
 - No individual signal establishes that a person or model authored an artifact.
-- Public-reference detector output is evidence only for its named mechanism,
-  key, configuration, comparator, threshold, and input conditions.
-- Provider-private detectors cannot be reproduced without the provider's
-  authority and required configuration. Related mechanism families do not fill
-  that gap.
-- Detection can be weaker on small samples and constrained or factual text,
-  where fewer eligible choices exist. A complete rewrite in which every word
-  is replaced can remove the statistical signal.
-- C2PA absence does not establish human authorship; C2PA presence does not
+- Public-reference output applies only to its named mechanism, key,
+  configuration, comparator, threshold, and input conditions.
+- Detection can weaken on small, constrained, or factual samples. A complete
+  rewrite can remove a statistical signal; that transformation outcome is not
+  an observation status.
+- C2PA absence does not establish human authorship, and C2PA presence does not
   establish validity, trust, truth, or authorship.
-- scrub is not a magic “AI detector” and should not be used to accuse someone
+- scrub is not a universal AI detector and should not be used to accuse someone
   of AI authorship from weak or unsupported evidence.
-- The project is early research and engineering work. Supported scope and known
-  deviations are recorded in [CONFORMANCE.md](CONFORMANCE.md).
 
-## What scrub implements and what it relies on
+Supported scope and deviations live in [CONFORMANCE.md](CONFORMANCE.md).
+Source precedence and exact upstream identities live in
+[`docs/SOURCE_AUTHORITY.md`](docs/SOURCE_AUTHORITY.md) and
+[`research/sources.yaml`](research/sources.yaml).
 
-| Surface | scrub's work | External authority or implementation |
-| --- | --- | --- |
-| Evidence semantics | Typed statuses, verifier/authority traces, supported and forbidden inference, CLI projections, proof ledger | Source hierarchy and cited authorities in [`research/sources.yaml`](research/sources.yaml) |
-| Unicode | Streaming observation, exact offsets, normalization comparison, conformance and partition oracles | Unicode 17.0.0 standards/data; pinned `unicode-normalization` crate |
-| C2PA | Same-byte inspection boundary, conservative state mapping, offline configuration, corpus replay | C2PA 2.4 and pinned `c2pa-rs` for parsing and cryptographic validation |
-| Text-watermark research | WaterLARP manifests, calibration/evaluation contracts, authority separation, reproducible evidence | Pinned public KGW, Google DeepMind SynthID, and Transformers references |
-| Claude boundary | Provider slot remains `UNKNOWN` without an authoritative runnable detector; public claims are classified against required authority | Anthropic's published mechanism and inference statements |
-
-scrub does not claim to have invented Unicode scanning, normalization, C2PA,
-SynthID, KGW, statistical watermarking, calibration, provenance, or source
-authority. Exact revisions, integration modes, licenses, and limitations live in
-the [source ledger](research/sources.yaml), [conformance matrix](CONFORMANCE.md),
-and [third-party notices](THIRD_PARTY_NOTICES.md).
-
-## Reproduce and develop
+## Reproduce and contribute
 
 ```console
 just check
@@ -278,12 +191,11 @@ python tools/verify_claude_watermark_claims.py
 python tools/c2pa_replay.py --check
 ```
 
-`just check` runs formatting, warning-denied Clippy, and workspace tests.
-`just prove` executes the public claim ledger. The two focused commands verify
-the bounded Claude audit and pinned C2PA replay artifacts. Deeper reproduction
-contracts are indexed by [product proof](docs/specs/product-proof.md),
-[adversarial determinism](docs/specs/mega-b-adversarial-determinism.md),
-[WaterLARP methodology](docs/specs/waterlarp.md), and
-[release integrity](docs/RELEASE_INTEGRITY.md).
+`just check` runs formatting, warning-denied Clippy, and workspace tests. More
+focused entry points are indexed in the [evidence map](evidence/README.md).
+Contributions should follow [CONTRIBUTING.md](CONTRIBUTING.md); security reports
+should follow [SECURITY.md](SECURITY.md).
 
-Licensed under [Apache-2.0](LICENSE).
+scrub's own code is licensed under [Apache-2.0](LICENSE). External
+implementations, data, and fixtures retain their own terms; see
+[third-party notices](THIRD_PARTY_NOTICES.md).

@@ -41,10 +41,10 @@ Correctness and evidence semantics outrank feature count.
 The human maintainer owns staging and history.
 Automated coding tools may inspect read-only Git state (`status`, `diff`, `log`, `show`) but must not stage, commit, push, tag, merge, rebase, reset, switch/checkout branches, stash, or rewrite history.
 
-## Planning
+## Change discipline
 
-For multi-file/multi-step work, read `docs/PLANS.md` and maintain a milestone plan in `docs/plans/`.
-Do not expand scope beyond that plan without explicitly recording the decision.
+Keep changes scoped. Record durable public behavior in a specification, ADR,
+evidence artifact, or source record rather than a milestone journal.
 
 ## Verification
 

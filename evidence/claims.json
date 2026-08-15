@@ -58,10 +58,10 @@
     },
     {
       "claim_id": "streaming.partition_invariance",
-      "claim_text": "For the deterministic Mega B metamorphic suite, legal reader partitioning does not change canonical semantic report bytes for the exact same artifact bytes.",
+      "claim_text": "For the deterministic streaming metamorphic suite, legal reader partitioning does not change canonical semantic report bytes for the exact same artifact bytes.",
       "claim_class": "measured",
       "status": "established",
-      "evidence_artifacts": ["crates/scrub/tests/streaming_partition.rs", "crates/scrub/src/lib.rs", "docs/plans/0012-mega-b-adversarial-determinism.md"],
+      "evidence_artifacts": ["crates/scrub/tests/streaming_partition.rs", "crates/scrub/src/lib.rs", "docs/specs/mega-b-adversarial-determinism.md"],
       "authority_source_ids": [],
       "reproduce_command": ["cargo", "test", "--offline", "-p", "scrub", "--test", "streaming_partition"],
       "expected_result": "Exhaustive small splits, fixed seeded large partitions, malformed UTF-8, Unicode scalar interiors, zero bytes, and 65,536-byte boundary cases produce identical canonical report bytes.",

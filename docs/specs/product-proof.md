@@ -54,8 +54,8 @@ execution, and output failures record FAILED, so a previous successful
 The proof includes the Git revision,
 claim/gate states, source revisions, committed fixture SHA-256 values, any
 locally established report digest, and explicit limitations. It omits execution
-timestamps and gate durations. No proof digest is claimed because Mega A does
-not define canonical proof bytes.
+timestamps and gate durations. No proof digest is claimed because the proof
+contract does not define canonical proof bytes.
 
 Default proof establishes only the rows present in the ledger. In particular:
 
@@ -66,8 +66,8 @@ Default proof establishes only the rows present in the ledger. In particular:
 - ignored local WaterLARP pilot results are not prerequisites, and pilot scope
   is not benchmark evidence;
 - local report repeatability is not a Windows/Linux/macOS determinism result;
-- workflow source does not establish cross-platform equality before three
-  platform artifacts are compared;
+- the historical three-OS comparison is separate scoped evidence and is not
+  rerun or generalized by the default proof;
 - bounded fuzz smoke is separate CI evidence and is not an absence-of-bugs
   proof;
 - RFC 8785/JCS compliance is not claimed.

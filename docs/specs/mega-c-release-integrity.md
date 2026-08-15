@@ -1,8 +1,8 @@
-# Mega C release-integrity contract
+# Release-integrity contract
 
 ## Integrity layers
 
-Mega C treats four facts as independent:
+The release contract treats four facts as independent:
 
 1. `SHA256SUMS` checks archive bytes against a checksum manifest. It does not
    authenticate a publisher.
@@ -13,14 +13,15 @@ Mega C treats four facts as independent:
    gives consumers a release-membership attestation. A mutable draft is not an
    immutable release.
 4. Apple Developer ID/notarization and Windows Authenticode are platform-vendor
-   trust mechanisms. Mega C provides none of them for v0.1 and says so in every
+   trust mechanisms. The v0.1 contract provides none of them and says so in every
    archive.
 
 ## Release state machine
 
 The only approved sequence is:
 
-`SOURCE COMMIT -> NATIVE BUILD -> BINARY SMOKE -> DETERMINISTIC PACKAGE ->`
+`SOURCE COMMIT -> EXACT-SOURCE CORE GATE -> NATIVE BUILD -> BINARY SMOKE ->`
+`DETERMINISTIC PACKAGE ->`
 `PACKAGE DIGEST -> BUILD ATTESTATION -> MULTI-PLATFORM ASSEMBLY ->`
 `RELEASE MANIFEST -> SHA256SUMS -> DRAFT GITHUB RELEASE -> HUMAN PUBLISH ->`
 `IMMUTABLE RELEASE`.
@@ -68,6 +69,7 @@ Every archive has exactly this tree:
 scrub-vX.Y.Z-<target>/
     scrub | scrub.exe
     LICENSE
+    THIRD_PARTY_LICENSES.txt
     THIRD_PARTY_NOTICES.md
     RELEASE-METADATA.json
 ```
@@ -75,9 +77,17 @@ scrub-vX.Y.Z-<target>/
 Members are sorted. Timestamps, ownership fields, names, permissions, gzip
 header metadata, and ZIP metadata are normalized. The Unix binary mode is 0755;
 all other files are 0644. Generated JSON is UTF-8 with LF endings and a final
-newline. Therefore identical binary, license, notice, metadata, and packager
-inputs produce byte-identical archives. This is deterministic packaging, not a
-claim of bit-for-bit reproducible compiler output.
+newline. Therefore identical binary, project license, third-party license
+bundle, notice, metadata, and packager inputs produce byte-identical archives.
+This is deterministic packaging, not a claim of bit-for-bit reproducible
+compiler output.
+
+Before producing release output, the packager verifies
+`THIRD_PARTY_LICENSES.txt` against the independently committed canonical
+package/file/digest mapping in `third_party/license-manifest.json`. The
+manifest is generated from exact locked crate sources alongside the bundle but
+is not an end-user archive member. Missing, extra, duplicate, or remapped legal
+files fail the release before archive creation.
 
 Verification accepts that one canonical representation, not merely an archive
 with equivalent extracted files. ZIP type, order, compression, platform,
@@ -128,6 +138,13 @@ itself.
 
 ## GitHub workflow contract
 
+Both tag pushes and manual preflights run `core-gate` after exact source
+validation. It checks out `github.sha`, proves checkout HEAD equals that SHA, and
+runs Rust 1.97.1 formatting, warning-denied locked workspace Clippy, and locked
+workspace tests. Both native build paths and aggregate assembly require that job
+to succeed, so no archive, attestation, aggregate, or draft path can bypass a
+failed exact-source gate.
+
 Build jobs have `contents: read`. Tag-mode build jobs alone add
 `id-token: write` and `attestations: write`; no OCI storage record is created,
 so `artifact-metadata: write` is not granted. The tag-only attestation step uses
@@ -160,7 +177,18 @@ verifies that local archive bytes are an asset in that immutable release. The
 third verifies GitHub/Sigstore artifact provenance for those archive bytes.
 Local checksum verification is a separate comparison against `SHA256SUMS`.
 
-Mega C authoring establishes none of the future GitHub results. Until an actual
-tag workflow and human immutable publication occur, Linux/macOS packages,
-GitHub build attestations, the draft release, release attestation, and immutable
-release membership are **NOT YET ESTABLISHED**.
+## Historical preflight evidence
+
+At revision `24af24a72adc632852e5fd2114725b28bd3002f1`, GitHub Actions
+[run 31892107877](https://github.com/AnirudhDabas/scrubts/actions/runs/31892107877)
+passed source validation, all four native builds and extracted-binary smokes,
+and exact assembly of four archives plus `release-manifest.json` and
+`SHA256SUMS`. Independently downloaded archive hashes matched both aggregate
+records. The tag-only `tag-build-and-attest` and `create-draft-release` jobs
+were correctly skipped.
+
+That run is historical preflight evidence only. It is not a current-HEAD
+preflight, a tag build, an artifact attestation, a draft or public release,
+immutable release membership, or platform signing. Until an actual tag workflow
+and human immutable publication occur, those release layers remain **NOT YET
+ESTABLISHED**.

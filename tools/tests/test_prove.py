@@ -35,8 +35,10 @@ class ProofResultTests(unittest.TestCase):
     def test_proof_scope_includes_release_bearing_sources_only(self) -> None:
         for relative in (
             ".github/workflows/release.yml",
+            "LICENSE",
+            "THIRD_PARTY_NOTICES.md",
+            "docs/adr/0004-release-provenance.md",
             "docs/RELEASE_INTEGRITY.md",
-            "docs/plans/0013-mega-c-release-integrity.md",
             "docs/specs/mega-c-release-integrity.md",
             "schemas/release-artifact-0.1.schema.json",
             "schemas/release-manifest-0.1.schema.json",
@@ -49,7 +51,6 @@ class ProofResultTests(unittest.TestCase):
             "dist/scrub-v0.1.0-x86_64-pc-windows-msvc.zip",
             "target/release/scrub.exe",
             "BENCHMARKS.md",
-            "docs/adr/0004-release-provenance.md",
         ):
             with self.subTest(relative=relative):
                 self.assertFalse(prove.in_proof_source_scope(relative))

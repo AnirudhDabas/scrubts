@@ -1,6 +1,9 @@
 /Cargo.lock -text
 /LICENSE -text
+/THIRD_PARTY_LICENSES.txt -text
+/third_party/license-manifest.json -text
 /THIRD_PARTY_NOTICES.md -text
+/third_party/license-fallbacks/texts/*.txt -text
 /crates/scrub/tests/fixtures/NormalizationTest-17.0.0.txt -text
 /crates/scrub/tests/fixtures/DerivedAge-17.0.0.txt -text
 /crates/scrub/tests/fixtures/c2pa/unsigned/sample.png -text

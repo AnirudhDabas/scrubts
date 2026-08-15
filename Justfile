@@ -9,7 +9,8 @@ prove:
     python tools/prove.py
 
 release-check:
-    waterlarp\.venv\Scripts\python.exe -m unittest tools.tests.test_release tools.tests.test_prove
+    python tools/third_party_licenses.py verify
+    waterlarp\.venv\Scripts\python.exe -m unittest tools.tests.test_third_party_licenses tools.tests.test_release tools.tests.test_prove
 
 waterlarp-check:
     waterlarp\.venv\Scripts\python.exe -m ruff check --config waterlarp\pyproject.toml waterlarp\src waterlarp\tests

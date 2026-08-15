@@ -1,0 +1,213 @@
+{
+  "candidate_file_pattern": "^(?:licen[cs]e(?:[-._].*)?|copying(?:[-._].*)?|copyright(?:[-._].*)?|notice(?:[-._].*)?|unlicense|authors)$",
+  "packages": [
+    {
+      "candidate_files": [
+        {
+          "byte_length": 1483,
+          "git_blob_sha1": "cd496ba72eb37e83a44958358d1f89a8a28cbc15",
+          "path": "LICENSE",
+          "sha256": "c0c56f26d9c051cac4d200c34c84e7ae9aaa853e01a982a1df08b09931e518ae"
+        }
+      ],
+      "package": "alloc-stdlib",
+      "path_in_vcs": "alloc-stdlib",
+      "repository": "https://github.com/dropbox/rust-alloc-no-stdlib",
+      "revision": "ae42d22078b98549e987d2f03d12df7b984fde47",
+      "version": "0.2.4"
+    },
+    {
+      "candidate_files": [
+        {
+          "byte_length": 10847,
+          "git_blob_sha1": "16fe87b06e802f094b3fbb0894b137bca2b16ef1",
+          "path": "LICENSE-APACHE",
+          "sha256": "a60eea817514531668d7e00765731449fe14d059d3249e0bc93b36de45f759f2"
+        },
+        {
+          "byte_length": 1060,
+          "git_blob_sha1": "290e7b9be19d39a81c8eb24c75a6b5f1e57fea71",
+          "path": "LICENSE-MIT",
+          "sha256": "a5c61b93b6ee1d104af9920cf020ff3c7efe818e31fe562c72261847a728f513"
+        }
+      ],
+      "package": "asn1-rs-impl",
+      "path_in_vcs": "impl",
+      "repository": "https://github.com/rusticata/asn1-rs",
+      "revision": "a20e5f7319c896737ad0f2557037817b91ad854f",
+      "version": "0.2.0"
+    },
+    {
+      "candidate_files": [],
+      "package": "btree-range-map",
+      "path_in_vcs": "",
+      "repository": "https://github.com/timothee-haudebourg/btree-range-map",
+      "revision": "ad2af35cd1fe34a3bee5a95a0db1537846368c23",
+      "version": "0.7.2"
+    },
+    {
+      "candidate_files": [
+        {
+          "byte_length": 11335,
+          "git_blob_sha1": "758d439916bc780a7fa5c90aebc94863527f904d",
+          "path": "LICENSE-APACHE",
+          "sha256": "86bdd5dafab77451044b6fd6d2efab23e3410ce658eb097f04c04f4f54aed62f"
+        },
+        {
+          "byte_length": 1083,
+          "git_blob_sha1": "e1e3bd7e9efec69f22be9f88fb8c37f6649a99d3",
+          "path": "LICENSE-MIT",
+          "sha256": "89375a50de90d2dcaa04406086da832ad452ebcaf6ab402ef3d51b8401a67c71"
+        }
+      ],
+      "package": "c2pa",
+      "path_in_vcs": "sdk",
+      "repository": "https://github.com/contentauth/c2pa-rs",
+      "revision": "ae0c3fde8ea399bf7f12379bb44e38b2738b8369",
+      "version": "0.90.12"
+    },
+    {
+      "candidate_files": [
+        {
+          "byte_length": 11357,
+          "git_blob_sha1": "8dada3edaf50dbc082c9a125058f25def75e625a",
+          "path": "LICENSE-APACHE",
+          "sha256": "b40930bbcf80744c86c46a12bc9da056641d722716c378f5659b9e555ef833e1"
+        },
+        {
+          "byte_length": 1078,
+          "git_blob_sha1": "688d43f92fad946c826ac49c4edf7ec280fdad66",
+          "path": "LICENSE-MIT",
+          "sha256": "be7ee8aa49dc586023669a0c600a0536fce6a9f61264a53a67cdd842564ed899"
+        }
+      ],
+      "package": "delegate",
+      "path_in_vcs": "",
+      "repository": "https://github.com/kobzol/rust-delegate",
+      "revision": "e2880cf7b69684aaab86855aa128d9fb0321b0c9",
+      "version": "0.8.0"
+    },
+    {
+      "candidate_files": [
+        {
+          "byte_length": 10847,
+          "git_blob_sha1": "16fe87b06e802f094b3fbb0894b137bca2b16ef1",
+          "path": "LICENSE-APACHE",
+          "sha256": "a60eea817514531668d7e00765731449fe14d059d3249e0bc93b36de45f759f2"
+        },
+        {
+          "byte_length": 1023,
+          "git_blob_sha1": "31aa79387f27e730e33d871925e152e35e428031",
+          "path": "LICENSE-MIT",
+          "sha256": "23f18e03dc49df91622fe2a76176497404e46ced8a715d9d2b67a7446571cca3"
+        }
+      ],
+      "package": "iref-core",
+      "path_in_vcs": "crates/core",
+      "repository": "https://github.com/timothee-haudebourg/iref",
+      "revision": "28add683f31d48caad073dcf6bd29fcc0ef90ee8",
+      "version": "3.2.2"
+    },
+    {
+      "candidate_files": [
+        {
+          "byte_length": 10701,
+          "git_blob_sha1": "dae69698150efd4026872d3b2c04c2418a6b5c77",
+          "path": "LICENSE-APACHE",
+          "sha256": "85a884980abd6032fc6b5439ba918ab16db9ac9051b5cf18db9c27c587df07c0"
+        },
+        {
+          "byte_length": 1088,
+          "git_blob_sha1": "6a4eb87467907c9eb8622bdbe58cb0bb798b23e3",
+          "path": "LICENSE-MIT",
+          "sha256": "4d022727ea392ebba2fe5e9a5f78c610a0eae506b491f3db29c78b6d430d6503"
+        }
+      ],
+      "package": "jfifdump",
+      "path_in_vcs": "jfifdump",
+      "repository": "https://github.com/vstroebel/jfifdump",
+      "revision": "013c03f3e5a7405974ddd1469d0ce4219c8b225b",
+      "version": "0.6.0"
+    },
+    {
+      "candidate_files": [],
+      "package": "range-traits",
+      "path_in_vcs": "",
+      "repository": "https://github.com/timothee-haudebourg/range-traits",
+      "revision": "19926504c0387a590f87ddc20c70de03cd3df72d",
+      "version": "0.3.2"
+    },
+    {
+      "candidate_files": [
+        {
+          "byte_length": 551,
+          "git_blob_sha1": "edb4fd4715a4bc51827da2952627e55eeb653ea2",
+          "path": "LICENCE-APACHE",
+          "sha256": "ebd8153ef4d2d160d0bdc76a1821ac2a0eb1f57e8c056f3674032f8140c41745"
+        },
+        {
+          "byte_length": 1073,
+          "git_blob_sha1": "39ec9b8397de5cbfcdead9f72f9773434e925f73",
+          "path": "LICENCE-MIT",
+          "sha256": "ee1201a73de9b44ad1ef02a2f9f82705b1350b878e2bab3c3fb6282daf038a73"
+        }
+      ],
+      "package": "rasn-cms",
+      "path_in_vcs": "standards/cms",
+      "repository": "https://github.com/librasn/rasn",
+      "revision": "398c530cb0a4e1a2ab9515eac5da79111dd3014e",
+      "version": "0.28.14"
+    },
+    {
+      "candidate_files": [
+        {
+          "byte_length": 551,
+          "git_blob_sha1": "edb4fd4715a4bc51827da2952627e55eeb653ea2",
+          "path": "LICENCE-APACHE",
+          "sha256": "ebd8153ef4d2d160d0bdc76a1821ac2a0eb1f57e8c056f3674032f8140c41745"
+        },
+        {
+          "byte_length": 1073,
+          "git_blob_sha1": "39ec9b8397de5cbfcdead9f72f9773434e925f73",
+          "path": "LICENCE-MIT",
+          "sha256": "ee1201a73de9b44ad1ef02a2f9f82705b1350b878e2bab3c3fb6282daf038a73"
+        }
+      ],
+      "package": "rasn-ocsp",
+      "path_in_vcs": "standards/ocsp",
+      "repository": "https://github.com/librasn/rasn",
+      "revision": "398c530cb0a4e1a2ab9515eac5da79111dd3014e",
+      "version": "0.28.14"
+    },
+    {
+      "candidate_files": [
+        {
+          "byte_length": 551,
+          "git_blob_sha1": "edb4fd4715a4bc51827da2952627e55eeb653ea2",
+          "path": "LICENCE-APACHE",
+          "sha256": "ebd8153ef4d2d160d0bdc76a1821ac2a0eb1f57e8c056f3674032f8140c41745"
+        },
+        {
+          "byte_length": 1073,
+          "git_blob_sha1": "39ec9b8397de5cbfcdead9f72f9773434e925f73",
+          "path": "LICENCE-MIT",
+          "sha256": "ee1201a73de9b44ad1ef02a2f9f82705b1350b878e2bab3c3fb6282daf038a73"
+        }
+      ],
+      "package": "rasn-pkix",
+      "path_in_vcs": "standards/pkix",
+      "repository": "https://github.com/librasn/rasn",
+      "revision": "398c530cb0a4e1a2ab9515eac5da79111dd3014e",
+      "version": "0.28.14"
+    },
+    {
+      "candidate_files": [],
+      "package": "static-regular-grammar",
+      "path_in_vcs": "",
+      "repository": "https://github.com/timothee-haudebourg/static-regular-grammar",
+      "revision": "31bcc76bb370f74c267eaef29562e87fb968c712",
+      "version": "2.0.2"
+    }
+  ],
+  "schema_version": 1
+}

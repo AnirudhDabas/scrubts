@@ -24,6 +24,15 @@ import zipfile
 import zlib
 
 
+TOOLS_DIR = Path(__file__).resolve().parent
+if str(TOOLS_DIR) not in sys.path:
+    sys.path.insert(0, str(TOOLS_DIR))
+from third_party_licenses import (  # noqa: E402
+    LicenseBundleError,
+    verify_reviewed_bundle,
+)
+
+
 ROOT = Path(__file__).resolve().parents[1]
 SCHEMA_VERSION = "0.1"
 TOOLCHAIN_VERSION = "1.97.1"
@@ -42,6 +51,7 @@ TARGET_CONFIG = {
 RELEASE_SOURCE_BYTE_PATHS = (
     "Cargo.lock",
     "LICENSE",
+    "THIRD_PARTY_LICENSES.txt",
     "THIRD_PARTY_NOTICES.md",
 )
 SEMVER = r"(0|[1-9][0-9]*)\.(0|[1-9][0-9]*)\.(0|[1-9][0-9]*)(?:-[0-9A-Za-z-]+(?:\.[0-9A-Za-z-]+)*)?(?:\+[0-9A-Za-z-]+(?:\.[0-9A-Za-z-]+)*)?"
@@ -109,6 +119,15 @@ MANIFEST_ROW_KEYS = {
 
 class ReleaseError(ValueError):
     """A release input violates the repository contract."""
+
+
+def validate_third_party_license_bundle(root: Path | None = None) -> None:
+    if root is None:
+        root = ROOT
+    try:
+        verify_reviewed_bundle(root)
+    except LicenseBundleError as error:
+        raise ReleaseError(f"third-party license bundle is invalid: {error}") from error
 
 
 @dataclass(frozen=True)
@@ -405,6 +424,10 @@ def archive_members(
     members = {
         f"{archive_root}/{metadata['binary_filename']}": (binary_bytes, 0o755),
         f"{archive_root}/LICENSE": (release_source_bytes["LICENSE"], 0o644),
+        f"{archive_root}/THIRD_PARTY_LICENSES.txt": (
+            release_source_bytes["THIRD_PARTY_LICENSES.txt"],
+            0o644,
+        ),
         f"{archive_root}/THIRD_PARTY_NOTICES.md": (
             release_source_bytes["THIRD_PARTY_NOTICES.md"],
             0o644,
@@ -504,6 +527,7 @@ def expected_member_names(metadata: dict[str, Any]) -> tuple[str, list[str]]:
         f"{archive_root}/{metadata['binary_filename']}",
         f"{archive_root}/LICENSE",
         f"{archive_root}/RELEASE-METADATA.json",
+        f"{archive_root}/THIRD_PARTY_LICENSES.txt",
         f"{archive_root}/THIRD_PARTY_NOTICES.md",
     ]
     return archive_root, sorted(names)
@@ -520,6 +544,7 @@ def canonical_archive_layout(path: Path, root: Path = ROOT) -> tuple[str, str, l
     files = [
         f"{archive_root}/{binary_name}",
         f"{archive_root}/LICENSE",
+        f"{archive_root}/THIRD_PARTY_LICENSES.txt",
         f"{archive_root}/THIRD_PARTY_NOTICES.md",
         f"{archive_root}/RELEASE-METADATA.json",
     ]
@@ -535,7 +560,11 @@ def validate_member_size(name: str, size: int, is_directory: bool = False) -> No
         return
     if name.endswith("/RELEASE-METADATA.json"):
         limit = MAX_METADATA_BYTES
-    elif name.endswith("/LICENSE") or name.endswith("/THIRD_PARTY_NOTICES.md"):
+    elif (
+        name.endswith("/LICENSE")
+        or name.endswith("/THIRD_PARTY_LICENSES.txt")
+        or name.endswith("/THIRD_PARTY_NOTICES.md")
+    ):
         limit = MAX_SUPPORT_FILE_BYTES
     else:
         limit = MAX_BINARY_BYTES
@@ -841,6 +870,10 @@ def inspect_archive(
         != expected_release_source_bytes["LICENSE"]
     ):
         raise ReleaseError("archive LICENSE disagrees with repository LICENSE")
+    if contents[metadata_name.rsplit("/", 1)[0] + "/THIRD_PARTY_LICENSES.txt"] != (
+        expected_release_source_bytes["THIRD_PARTY_LICENSES.txt"]
+    ):
+        raise ReleaseError("archive third-party license bundle disagrees with repository bundle")
     if contents[metadata_name.rsplit("/", 1)[0] + "/THIRD_PARTY_NOTICES.md"] != (
         expected_release_source_bytes["THIRD_PARTY_NOTICES.md"]
     ):
@@ -1238,6 +1271,7 @@ def selected_tag(arguments: argparse.Namespace) -> str | None:
 def main(argv: list[str] | None = None) -> int:
     arguments = build_parser().parse_args(argv)
     try:
+        validate_third_party_license_bundle()
         if arguments.command == "validate-version":
             version = validate_version_contract(selected_tag(arguments))
             print(version)

@@ -4,6 +4,10 @@ version = "0.1.0"
 edition.workspace = true
 rust-version.workspace = true
 license.workspace = true
+description = "Evidence-first local inspection for Unicode and C2PA provenance signals"
+repository = "https://github.com/AnirudhDabas/scrubts"
+readme = "../../README.md"
+publish = false
 
 [dependencies]
 c2pa = { version = "=0.90.12", default-features = false, features = ["rust_native_crypto"] }

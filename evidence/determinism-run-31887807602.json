@@ -1,0 +1,65 @@
+{
+  "schema_version": "0.1",
+  "run_id": 31887807602,
+  "run_url": "https://github.com/AnirudhDabas/scrubts/actions/runs/31887807602",
+  "source_revision": "a47994e334aecb868c5f0b07a2cf97da8b09950f",
+  "conclusion": "success",
+  "comparison_artifact": {
+    "filename": "determinism-matrix.json",
+    "sha256": "28d18493aeaddf8d70a67a5af0e6b63ce26e5f8d3231f7056914b0e5e2ad51f5"
+  },
+  "platforms": [
+    {
+      "platform": "linux",
+      "runner": "ubuntu-24.04",
+      "artifact_sha256": "455e3883a341fc0c6d84bbd454064a6d0f85ef87a036c14099c637f9d4ff81f1"
+    },
+    {
+      "platform": "macos",
+      "runner": "macos-15",
+      "artifact_sha256": "274200dd3a30431fbc2db1e5bbf625b79f5bed986c8f00d0cfe87b69a1989539"
+    },
+    {
+      "platform": "windows",
+      "runner": "windows-2025",
+      "artifact_sha256": "91d3570006a7846d118d78dc1d53ec6d340353bf3b7fb599eeb3a5a5f0ca4600"
+    }
+  ],
+  "fixtures": [
+    {
+      "fixture_id": "public-c2pa-1.4-good-jpeg",
+      "input_sha256": "cafc48c53e651f7ba4622d1f72783827074211e42b9634cc863ec3be3c7651b3",
+      "canonical_semantic_sha256": "bd5e21e83a4846e324088c6e58e6b64f9a1c38522eb61b49ebd3f908a5937717",
+      "equal_on_all_platforms": true
+    },
+    {
+      "fixture_id": "unicode-bidi-control-corpus",
+      "input_sha256": "e3a8a319ef02c74b9dc12cb0fc5866a3b479d9db75fc5559de1dbf507122771c",
+      "canonical_semantic_sha256": "c62217cb96dc45d4e770d7dd1d3e22ac676ffdda77ee57ed0a7a2b3addb33716",
+      "equal_on_all_platforms": true
+    },
+    {
+      "fixture_id": "unsigned-png",
+      "input_sha256": "0bd72c972c14e5fd27d8473c5599e801031576e1398f384c40c3394696a2619a",
+      "canonical_semantic_sha256": "7ec0b24dc63ecd5aa2eb25e1010e8bcf4d68cda8eda83896c69163e76169c1f3",
+      "equal_on_all_platforms": true
+    },
+    {
+      "fixture_id": "unsigned-svg",
+      "input_sha256": "86a722290d12f661c619063cd8cb0137a720671f778596093bb7ac91525b18fe",
+      "canonical_semantic_sha256": "6607458cb6439e2243acf93e836b142853adddeb31da36d6b0a6e7c9e2c501a9",
+      "equal_on_all_platforms": true
+    }
+  ],
+  "equality_status": "ESTABLISHED",
+  "verification": {
+    "comparator": "tools/compare_determinism.py",
+    "downloaded_matrix_sha256": "28d18493aeaddf8d70a67a5af0e6b63ce26e5f8d3231f7056914b0e5e2ad51f5",
+    "independently_regenerated_matrix_sha256": "28d18493aeaddf8d70a67a5af0e6b63ce26e5f8d3231f7056914b0e5e2ad51f5"
+  },
+  "limitations": [
+    "This is historical evidence for revision a47994e334aecb868c5f0b07a2cf97da8b09950f, not current HEAD.",
+    "The result covers exactly four frozen fixtures and the recorded hosted runners; it is not universal cross-platform equivalence.",
+    "Canonical semantic report equality is not byte-for-byte reproducible compiler output."
+  ]
+}
