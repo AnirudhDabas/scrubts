@@ -1,0 +1,61 @@
+{
+  "schema_version": "0.1",
+  "captured_at_utc": "2026-08-15T15:58:26.2436942Z",
+  "project_revision": "24af24a72adc632852e5fd2114725b28bd3002f1",
+  "tool": {
+    "name": "scrub",
+    "version": "0.1.0",
+    "report_schema_version": "0.2"
+  },
+  "input": {
+    "fixture_id": "controlled-u200b",
+    "path": "research/claude-watermark-claims/fixtures/controlled-u200b.txt",
+    "byte_length": 50,
+    "sha256": "e05cdd0954208eb7d75a47571940b2c82a1f3f6b73df7c0a922478a90fc58a83"
+  },
+  "machine_command": [
+    "cargo",
+    "run",
+    "--offline",
+    "--quiet",
+    "-p",
+    "scrub",
+    "--",
+    "inspect",
+    "research/claude-watermark-claims/fixtures/controlled-u200b.txt",
+    "--json"
+  ],
+  "explain_command": [
+    "cargo",
+    "run",
+    "--offline",
+    "--quiet",
+    "-p",
+    "scrub",
+    "--",
+    "inspect",
+    "research/claude-watermark-claims/fixtures/controlled-u200b.txt",
+    "--explain"
+  ],
+  "outputs": {
+    "machine": {
+      "path": "research/claude-watermark-claims/evidence/scrub-report.json",
+      "byte_length": 10452,
+      "sha256": "2c88c719b32985af3f1ab2fc01350d5aacc33bf22e87c4f53889cd91c2c3cf07"
+    },
+    "explain": {
+      "path": "research/claude-watermark-claims/evidence/scrub-explain.txt",
+      "byte_length": 10153,
+      "sha256": "43a985002b293c69242a65daf0e31f8cac101b10602a546ab1afa007609f3b2e"
+    }
+  },
+  "observed_summary": {
+    "unicode_default_ignorable_code_point": "present",
+    "anthropic_embedded_text_watermark": "unknown"
+  },
+  "limitations": [
+    "The commands use the unchanged production CLI from the recorded project revision.",
+    "The Unicode finding is not an Anthropic provider-watermark result.",
+    "UNKNOWN is not ABSENT and does not establish origin, processing, or authorship."
+  ]
+}

@@ -1,0 +1,140 @@
+{
+  "$schema": "https://json-schema.org/draft/2020-12/schema",
+  "$id": "https://scrubts.dev/schemas/claude-watermark-claim-audit-0.1.schema.json",
+  "title": "scrub Claude watermark claim audit 0.1",
+  "type": "object",
+  "additionalProperties": false,
+  "required": [
+    "schema_version",
+    "audit_id",
+    "captured_at_utc",
+    "classification_definitions",
+    "authority_class_definitions",
+    "claims"
+  ],
+  "properties": {
+    "schema_version": { "const": "0.1" },
+    "audit_id": { "const": "mega-d-a-claude-watermark-claims" },
+    "captured_at_utc": { "type": "string", "format": "date-time" },
+    "classification_definitions": { "$ref": "#/$defs/classification_definitions" },
+    "authority_class_definitions": { "$ref": "#/$defs/authority_class_definitions" },
+    "claims": {
+      "type": "array",
+      "minItems": 1,
+      "items": { "$ref": "#/$defs/claim" }
+    }
+  },
+  "$defs": {
+    "identifier": {
+      "type": "string",
+      "pattern": "^[a-z0-9]+(?:[._-][a-z0-9]+)*$"
+    },
+    "classification": {
+      "enum": [
+        "supported",
+        "accurately_limited",
+        "unsupported_provider_inference",
+        "overstated_authorship_inference",
+        "unresolved",
+        "mechanism_demo_not_provider_detector"
+      ]
+    },
+    "authority_class": {
+      "enum": [
+        "none",
+        "public_observation",
+        "public_reference",
+        "provider_gated",
+        "public_verification"
+      ]
+    },
+    "classification_definitions": {
+      "type": "object",
+      "additionalProperties": false,
+      "required": [
+        "supported",
+        "accurately_limited",
+        "unsupported_provider_inference",
+        "overstated_authorship_inference",
+        "unresolved",
+        "mechanism_demo_not_provider_detector"
+      ],
+      "properties": {
+        "supported": { "const": "The claim stays within the observable and is backed by authority sufficient for that exact inference." },
+        "accurately_limited": { "const": "The claim expressly limits itself to the observable or correctly states an authority or inference boundary." },
+        "unsupported_provider_inference": { "const": "The claim presents or implies an Anthropic production detection or removal result without authority for Anthropic's deployed configuration and detector." },
+        "overstated_authorship_inference": { "const": "The claim upgrades watermark or provider-involvement evidence into authorship, ownership, or responsibility." },
+        "unresolved": { "const": "The captured material is too ambiguous or incomplete to support a stronger classification." },
+        "mechanism_demo_not_provider_detector": { "const": "The claim accurately demonstrates a public watermark mechanism or configuration and does not establish an Anthropic production result." }
+      }
+    },
+    "authority_class_definitions": {
+      "type": "object",
+      "additionalProperties": false,
+      "required": [
+        "none",
+        "public_observation",
+        "public_reference",
+        "provider_gated",
+        "public_verification"
+      ],
+      "properties": {
+        "none": { "const": "No verifier, implementation, or reproducible observation supporting the inference is exposed in the captured source." },
+        "public_observation": { "const": "A publicly reproducible observation such as Unicode code-point inspection, without provider-watermark authority." },
+        "public_reference": { "const": "A public mechanism specification or implementation evaluated under its own disclosed configuration." },
+        "provider_gated": { "const": "Provider-specific key, configuration, detector, or API authority not publicly available in the captured sources." },
+        "public_verification": { "const": "A publicly available verifier with authority for the exact deployed mechanism and configuration being claimed." }
+      }
+    },
+    "claim": {
+      "type": "object",
+      "additionalProperties": false,
+      "required": [
+        "claim_id",
+        "source_id",
+        "captured_at_utc",
+        "claim_text",
+        "claim_scope",
+        "observable",
+        "required_authority",
+        "available_authority",
+        "classification",
+        "rationale",
+        "supporting_source_ids",
+        "limitations"
+      ],
+      "properties": {
+        "claim_id": { "$ref": "#/$defs/identifier" },
+        "source_id": { "$ref": "#/$defs/identifier" },
+        "captured_at_utc": { "type": "string", "format": "date-time" },
+        "claim_text": { "type": "string", "minLength": 1, "maxLength": 320 },
+        "claim_scope": {
+          "enum": [
+            "unicode_observation",
+            "provider_detection",
+            "provider_removal",
+            "mechanism_demonstration",
+            "authority_limitation",
+            "authorship"
+          ]
+        },
+        "observable": { "type": "string", "minLength": 1 },
+        "required_authority": { "$ref": "#/$defs/authority_class" },
+        "available_authority": { "$ref": "#/$defs/authority_class" },
+        "classification": { "$ref": "#/$defs/classification" },
+        "rationale": { "type": "string", "minLength": 1 },
+        "supporting_source_ids": {
+          "type": "array",
+          "minItems": 1,
+          "uniqueItems": true,
+          "items": { "$ref": "#/$defs/identifier" }
+        },
+        "limitations": {
+          "type": "array",
+          "minItems": 1,
+          "items": { "type": "string", "minLength": 1 }
+        }
+      }
+    }
+  }
+}

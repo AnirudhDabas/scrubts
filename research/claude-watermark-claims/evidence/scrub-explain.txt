@@ -1,0 +1,224 @@
+scrub inspect
+
+Artifact
+  name    controlled-u200b.txt
+  bytes   50
+  sha256  e05cdd0954208eb7d75a47571940b2c82a1f3f6b73df7c0a922478a90fc58a83
+
+Evidence
+  Unicode  PRESENT      Default_Ignorable_Code_Point
+             locations=[{"code_point":"U+200B","byte_offset":4,"scalar_offset":4}]
+             locations_truncated=false
+  C2PA     ABSENT       text manifest wrapper
+  Claude   UNKNOWN      embedded text watermark
+             verifier anthropic.provider_detector (unavailable in checked authority snapshot)
+             related reference reference.synthid_text (related family; not deployment parity)
+             does not support claude_provider_parity
+
+Boundary
+  UNKNOWN and UNSUPPORTED are not negative findings; this report does not establish authorship or that the artifact is clean.
+  Use --explain for the authority and inference trace.
+
+Evidence trace
+
+Bidi_Control [unicode.bidi_control]
+  status        absent
+  observation   Unicode property membership
+  evidence      locations=[]
+  evidence      locations_truncated=false
+  evidence      total_occurrence_count=0
+  verifier      scrub.unicode_property_scan 17.0.0 (available)
+  authority     mechanism=STANDARD, implementation=PROJECT_IMPLEMENTATION, detector=PROJECT_IMPLEMENTATION
+  sources       unicode-proplist-17.0.0, unicode-uax44-17.0.0
+  configuration unicode-17.0.0
+  supports     unicode_property_absent_within_scope
+  does not supportartifact_clean
+               human_authorship
+               ai_authorship
+               malicious_intent
+               watermark_present
+               watermark_absent
+  limitation    Bidi_Control presence is a neutral Unicode property observation; directional-formatting controls may have legitimate uses.
+  reproduce     scrub inspect <artifact> --json --explain
+
+Default_Ignorable_Code_Point [unicode.default_ignorable_code_point]
+  status        present
+  observation   Unicode property membership
+  evidence      locations=[{"code_point":"U+200B","byte_offset":4,"scalar_offset":4}]
+  evidence      locations_truncated=false
+  evidence      total_occurrence_count=1
+  verifier      scrub.unicode_property_scan 17.0.0 (available)
+  authority     mechanism=STANDARD, implementation=PROJECT_IMPLEMENTATION, detector=PROJECT_IMPLEMENTATION
+  sources       unicode-derived-core-properties-17.0.0, unicode-uax44-17.0.0
+  configuration unicode-17.0.0
+  supports     unicode_property_present
+  does not supportartifact_clean
+               human_authorship
+               ai_authorship
+               malicious_intent
+               watermark_present
+               watermark_absent
+  limitation    Default_Ignorable_Code_Point presence is a neutral Unicode property observation; values may have legitimate formatting, shaping, language, or emoji uses.
+  reproduce     scrub inspect <artifact> --json --explain
+
+NFC difference [unicode.normalization.nfc_difference]
+  status        absent
+  observation   Unicode normalization difference
+  evidence      none retained
+  verifier      unicode-normalization 0.1.25 (available)
+  authority     mechanism=STANDARD, implementation=PUBLIC_REFERENCE, detector=PUBLIC_REFERENCE
+  sources       unicode-normalization-crate-0.1.25, unicode-normalization-test-17.0.0, unicode-uax15-17.0.0
+  configuration unicode-17.0.0
+  supports     unicode_normalization_difference_absent_within_scope
+  does not supportartifact_clean
+               human_authorship
+               ai_authorship
+               malicious_intent
+               watermark_present
+               watermark_absent
+  limitation    An NFC difference is a neutral Unicode normalization observation; it does not establish security risk, provenance, authorship, intent, or watermark presence.
+  reproduce     scrub inspect <artifact> --json --explain
+
+NFKC difference [unicode.normalization.nfkc_difference]
+  status        absent
+  observation   Unicode normalization difference
+  evidence      none retained
+  verifier      unicode-normalization 0.1.25 (available)
+  authority     mechanism=STANDARD, implementation=PUBLIC_REFERENCE, detector=PUBLIC_REFERENCE
+  sources       unicode-normalization-crate-0.1.25, unicode-normalization-test-17.0.0, unicode-uax15-17.0.0
+  configuration unicode-17.0.0
+  supports     unicode_normalization_difference_absent_within_scope
+  does not supportartifact_clean
+               human_authorship
+               ai_authorship
+               malicious_intent
+               watermark_present
+               watermark_absent
+  limitation    An NFKC difference is a neutral Unicode compatibility-normalization observation; compatibility folding can erase distinctions and must not be interpreted as sanitization, security risk, provenance, authorship, intent, or watermark presence.
+  reproduce     scrub inspect <artifact> --json --explain
+
+text manifest wrapper [c2pa.text_manifest_wrapper]
+  status        absent
+  observation   C2PA Appendix A.8 carrier
+  evidence      none retained
+  verifier      scrub.c2pa_text_wrapper 2.4 (available)
+  authority     mechanism=STANDARD, implementation=PROJECT_IMPLEMENTATION, detector=PROJECT_IMPLEMENTATION
+  sources       c2pa-spec-2.4
+  configuration c2pa-2.4-a8
+  supports     c2pa_carrier_absent_within_scope
+  does not supportartifact_clean
+               human_authorship
+               ai_authorship
+               watermark_present
+               watermark_absent
+               c2pa_claim_validity
+               c2pa_hard_binding
+               c2pa_credential_trust
+               authorship
+               truthfulness
+  limitation    C2PA 2.4 Appendix A.8 remains under review and may change; this carrier is distinct from Claude embedded text watermarking.
+  reproduce     scrub inspect <artifact> --json --explain
+
+manifest store [c2pa.manifest_store]
+  status        not_applicable
+  observation   C2PA manifest store
+  evidence      none retained
+  verifier      c2pa-rs 0.90.12 (available)
+  authority     mechanism=STANDARD, implementation=PUBLIC_REFERENCE, detector=PUBLIC_REFERENCE
+  sources       c2pa-rs, c2pa-spec-2.4
+  configuration c2pa-rs-0.90.12-fixed-local-settings
+  supports     none
+  does not supportartifact_clean
+               human_authorship
+               ai_authorship
+               watermark_present
+               watermark_absent
+               c2pa_claim_validity
+               c2pa_hard_binding
+               c2pa_credential_trust
+               authorship
+               truthfulness
+  reproduce     scrub inspect <artifact> --json --explain
+
+manifest validation [c2pa.manifest_validation]
+  status        not_applicable
+  observation   C2PA claim validation
+  evidence      none retained
+  verifier      c2pa-rs 0.90.12 (available)
+  authority     mechanism=STANDARD, implementation=PUBLIC_REFERENCE, detector=PUBLIC_REFERENCE
+  sources       c2pa-rs, c2pa-spec-2.4
+  configuration c2pa-rs-0.90.12-fixed-local-settings
+  supports     none
+  does not supportartifact_clean
+               human_authorship
+               ai_authorship
+               watermark_present
+               watermark_absent
+               c2pa_hard_binding
+               c2pa_credential_trust
+               authorship
+               truthfulness
+  reproduce     scrub inspect <artifact> --json --explain
+
+hard binding [c2pa.hard_binding]
+  status        not_applicable
+  observation   C2PA hard binding
+  evidence      none retained
+  verifier      c2pa-rs 0.90.12 (available)
+  authority     mechanism=STANDARD, implementation=PUBLIC_REFERENCE, detector=PUBLIC_REFERENCE
+  sources       c2pa-rs, c2pa-spec-2.4
+  configuration c2pa-rs-0.90.12-fixed-local-settings
+  supports     none
+  does not supportartifact_clean
+               human_authorship
+               ai_authorship
+               watermark_present
+               watermark_absent
+               c2pa_credential_trust
+               authorship
+               truthfulness
+  reproduce     scrub inspect <artifact> --json --explain
+
+credential trust [c2pa.credential_trust]
+  status        not_applicable
+  observation   C2PA credential trust
+  evidence      none retained
+  verifier      c2pa-rs 0.90.12 (available)
+  authority     mechanism=STANDARD, implementation=PUBLIC_REFERENCE, detector=PUBLIC_REFERENCE
+  sources       c2pa-rs, c2pa-spec-2.4
+  configuration c2pa-rs-0.90.12-fixed-local-settings
+  supports     none
+  does not supportartifact_clean
+               human_authorship
+               ai_authorship
+               watermark_present
+               watermark_absent
+               authorship
+               truthfulness
+  reproduce     scrub inspect <artifact> --json --explain
+
+embedded text watermark [anthropic.embedded_text_watermark]
+  status        unknown
+  observation   provider text watermark
+  evidence      detector_availability=announced_forthcoming
+  evidence      exact_deployed_configuration=undisclosed
+  evidence      provider_detector_api_contract=unknown_not_public
+  evidence      provider_key=private_not_public
+  evidence      public_reference_relationship=related_family_not_deployment_parity
+  verifier      anthropic.provider_detector unpublished (unavailable in checked authority snapshot)
+  authority     mechanism=PUBLIC_MECHANISM_PRIVATE_KEY, implementation=UNDOCUMENTED_PROVIDER, detector=UNDOCUMENTED_PROVIDER
+  sources       anthropic-claude-marking, anthropic-claude-text-watermark
+  related       reference.synthid_text (related family; not deployment parity)
+  supports     provider_mechanism_family_disclosed
+               provider_detector_unavailable
+  does not supportartifact_clean
+               human_authorship
+               ai_authorship
+               watermark_present
+               watermark_absent
+               claude_watermark_present
+               claude_watermark_absent
+               claude_provider_parity
+  limitation    A public SynthID reference result is not an Anthropic provider-detector result; UNKNOWN does not mean human-written or unwatermarked.
+  limitation    The checked Anthropic authority snapshot records the exact deployed configuration, key, detector statistic, threshold, and API contract as unavailable to scrub.
+  reproduce     scrub inspect <artifact> --json --explain

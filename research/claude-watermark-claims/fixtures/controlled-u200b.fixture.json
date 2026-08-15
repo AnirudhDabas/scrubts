@@ -1,0 +1,27 @@
+{
+  "schema_version": "0.1",
+  "fixture_id": "controlled-u200b",
+  "role": "project_created_controlled_negative",
+  "fixture_file": "research/claude-watermark-claims/fixtures/controlled-u200b.txt",
+  "visible_rendering_file": "research/claude-watermark-claims/fixtures/controlled-u200b.visible.txt",
+  "generator_file": "research/claude-watermark-claims/fixtures/generate_fixture.py",
+  "construction": "Insert UTF-8 E2 80 8B for U+200B at byte offset 4 of the visible rendering.",
+  "visible_rendering": "This sentence is a controlled project fixture.\n",
+  "injected_code_point": "U+200B",
+  "injected_name": "ZERO WIDTH SPACE",
+  "injected_utf8_hex": "e2808b",
+  "occurrence_count": 1,
+  "byte_offset_zero_based": 4,
+  "scalar_offset_zero_based": 4,
+  "fixture_byte_length": 50,
+  "fixture_sha256": "e05cdd0954208eb7d75a47571940b2c82a1f3f6b73df7c0a922478a90fc58a83",
+  "visible_byte_length": 47,
+  "visible_sha256": "4dd8e0abf0dca829f6b6717d41c5ed80819d251e0b7845b0d42b5207660f9047",
+  "generator_sha256": "915de59b4d12c78b4169136af73f28698aac1c79f807c372e86de16f7cf167bb",
+  "fixture_hex": "54686973e2808b2073656e74656e6365206973206120636f6e74726f6c6c65642070726f6a65637420666978747572652e0a",
+  "limitations": [
+    "The fixture is project-created and does not establish human authorship.",
+    "U+200B is not claimed to reproduce, resemble, or be part of Anthropic's production watermark.",
+    "Anthropic states that its text watermark adds no hidden characters."
+  ]
+}

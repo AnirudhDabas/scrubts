@@ -1,0 +1,167 @@
+schema_version: "0.1"
+captured_at_utc: "2026-08-15T15:53:53.8986491Z"
+sources:
+  - source_id: anthropic-claude-text-watermark
+    title: How Claude's text watermark works
+    publisher: Anthropic
+    url: https://www.anthropic.com/news/claude-text-watermark
+    source_type: live_webpage
+    captured_at_utc: "2026-08-15T15:53:53.8986491Z"
+    authority_class: provider_primary
+    integration_mode: claim_metadata_and_short_excerpts_only
+    revision: "HTTP 200 live UTF-8 HTML representation"
+    capture:
+      byte_length: 154384
+      sha256: 234c919556db86ca3be64fda0e05faf811794de6b15c987cdc7244f604a6693c
+    relevant_claims:
+      - claudewatermark-unicode-provider-detection
+      - gptcleanup-supported-hidden-unicode
+      - overchat-claude-detection-100-percent
+      - overchat-private-detector-caveat
+      - google-synthid-open-source-mechanism
+      - synthid-text-reference-implementation
+      - watermarks-remover-vendor-detector-caveat
+    relevant_excerpt: "Nothing is added to the text and there are no hidden characters;"
+    authoritative_findings:
+      mechanism_family: "Claude's text watermark is a version of the SynthID-Text approach published by Google DeepMind."
+      carrier: "Nothing is added to the text and there are no hidden characters."
+      detector_authority: "Using our key, one can only answer the question: What is the likelihood this was partly written by Claude?"
+      api_status: "We will soon be offering a watermark detection API. We're in the process of working out the details of its implementation."
+      inference_boundary: "A watermark can only determine that Claude was likely involved with the content at some point. It cannot distinguish Claude wrote this from Claude heavily edited this."
+      weak_signal_conditions: "Detection does not work well on small samples; factual passages and much code provide fewer unconstrained word choices."
+      rewriting: "Light editing probably won't remove the watermark completely; a complete rewrite where every word is replaced will."
+      file_provenance: "C2PA content credentials for supported files are separate from the text watermark."
+    limitations:
+      - "Vendor-reported authority for Claude; it does not publish the exact deployed configuration, key, detector statistic, threshold, false-positive target, or API contract."
+      - "The page says: We will soon be offering a watermark detection API. We're in the process of working out the details of its implementation."
+      - "Only metadata, hashes, short excerpts, and project-authored notes are retained; the webpage is not redistributed."
+    license: website_terms_excerpt_only
+
+  - source_id: google-synthid-safeguards
+    title: "SynthID: Tools for watermarking and detecting LLM-generated Text"
+    publisher: Google AI for Developers
+    url: https://ai.google.dev/responsible/docs/safeguards/synthid
+    source_type: live_webpage
+    captured_at_utc: "2026-08-15T15:53:53.8986491Z"
+    authority_class: official_reference_documentation
+    integration_mode: mechanism_documentation_and_short_excerpts_only
+    revision: "HTTP 200 live UTF-8 HTML representation"
+    capture:
+      byte_length: 120427
+      sha256: b05de40a746b92291d90d64c747b491d89bf9bb2f12c22219bdedac9b197f493
+    relevant_claims:
+      - google-synthid-open-source-mechanism
+      - synthid-text-reference-implementation
+      - watermarks-remover-vendor-detector-caveat
+    relevant_excerpt: "Watermark detection is probabilistic."
+    authoritative_findings:
+      public_mechanism: "SynthID Text has been open sourced to make watermarking for text generation available to developers."
+      configuration_authority: "Each watermarking configuration should be stored securely and privately."
+      verification_models: "The documentation distinguishes fully-private, semi-private, and public detector exposure."
+    limitations:
+      - "Authoritative for public SynthID mechanics and deployment choices, not for Anthropic's production configuration or detector."
+      - "Only metadata, hashes, short excerpts, and project-authored notes are retained; the webpage is not redistributed."
+    license: website_terms_excerpt_only
+
+  - source_id: claudewatermark-home
+    title: Claude Watermark Remover and Checker
+    publisher: claudewatermark.com
+    url: https://www.claudewatermark.com/
+    source_type: live_webpage
+    captured_at_utc: "2026-08-15T15:53:53.8986491Z"
+    authority_class: unaffiliated_public_page
+    integration_mode: audited_claim_metadata_and_short_excerpt_only
+    revision: "HTTP 200 live UTF-8 HTML representation"
+    capture:
+      byte_length: 47747
+      sha256: 580d79f8ee041e50a5e81ccefee8ef7ef29a4ff573c3c3382e030abf5e10a251
+    relevant_claims:
+      - claudewatermark-unicode-provider-detection
+    relevant_excerpt: "Find hidden characters that AI detection systems use to identify content produced by Claude, and other AI tools."
+    limitations:
+      - "Authority for its own page copy and captured client-side implementation only."
+      - "The live service was not exercised and server-side behavior was not inferred."
+    license: website_terms_excerpt_only
+
+  - source_id: gptcleanup-claude-watermark-cleaner
+    title: Claude Watermark Remover and Detector
+    publisher: GPT CLEAN UP
+    url: https://www.gptcleanup.com/claude-watermark-cleaner
+    source_type: live_webpage
+    captured_at_utc: "2026-08-15T15:53:53.8986491Z"
+    authority_class: unaffiliated_public_page
+    integration_mode: audited_claim_metadata_and_short_excerpt_only
+    revision: "HTTP 200 live UTF-8 HTML representation"
+    capture:
+      byte_length: 111915
+      sha256: 0fb93eae0027845ca98d9ea82194ed8e5c756e8295df5cca4939304349791f5c
+    relevant_claims:
+      - gptcleanup-supported-hidden-unicode
+    relevant_excerpt: "Detect and remove supported hidden Unicode characters from Claude text"
+    limitations:
+      - "Authority for its own page copy only."
+      - "The live service was not exercised and transformation behavior was not inferred."
+    license: website_terms_excerpt_only
+
+  - source_id: overchat-claude-watermark-article
+    title: "Claude Watermark: What It Is and How to Remove It from Text"
+    publisher: Overchat AI
+    url: https://overchat.ai/ai-hub/claude-watermark
+    source_type: live_webpage
+    captured_at_utc: "2026-08-15T15:53:53.8986491Z"
+    authority_class: unaffiliated_public_page
+    integration_mode: audited_claim_metadata_and_short_excerpts_only
+    revision: "page states Last Updated 2026-08-14; HTTP 200 live UTF-8 HTML representation"
+    capture:
+      byte_length: 130448
+      sha256: 2b1116cdca326e8de58aa3888f2d0adc81d8fee402c0ad9a7854bcfd02ac7d04
+    relevant_claims:
+      - overchat-claude-detection-100-percent
+      - overchat-private-detector-caveat
+    relevant_excerpt: "Anthropic has not yet published its complete detection specification"
+    limitations:
+      - "Authority for its own article copy only."
+      - "The linked remover was not exercised; private integrations and server-side behavior were not inferred."
+    license: website_terms_excerpt_only
+
+  - source_id: google-deepmind-synthid-text
+    title: SynthID Text reference implementation
+    publisher: Google DeepMind
+    url: https://github.com/google-deepmind/synthid-text
+    source_type: repository
+    captured_at_utc: "2026-08-15T15:53:53.8986491Z"
+    authority_class: reference_repository
+    integration_mode: pinned_readme_reference_only
+    revision: addb4a158143c7c6851a1308f78b89fceed59683
+    capture:
+      path: README.md
+      byte_length: 12558
+      sha256: 5fd70fde4e99dcf0923f090955d8899a8820a35966b0d7647cc5b62ad3b04406
+    relevant_claims:
+      - synthid-text-reference-implementation
+    relevant_excerpt: "It is not intended for production use."
+    limitations:
+      - "Pinned README authority for the repository's stated reference scope; the implementation was not copied or executed."
+      - "Not authority for Anthropic's deployment configuration, key, or detector."
+    license: Apache-2.0
+
+  - source_id: watermarks-remover-repository
+    title: watermarks-remover
+    publisher: guillaumemeyer/watermarks-remover contributors
+    url: https://github.com/guillaumemeyer/watermarks-remover
+    source_type: repository
+    captured_at_utc: "2026-08-15T15:53:53.8986491Z"
+    authority_class: unaffiliated_public_repository
+    integration_mode: pinned_readme_claim_audit_only
+    revision: 92f38b10b247788c1d2e2807251e755c315918a8
+    capture:
+      path: README.md
+      byte_length: 48712
+      sha256: 56f32dc25256175612d28c0143f870115f25146f252307b4fe693315cf4cbf0d
+    relevant_claims:
+      - watermarks-remover-vendor-detector-caveat
+    relevant_excerpt: "It cannot certify that vendor detectors will fail."
+    limitations:
+      - "Authority for its own pinned documentation only; no remover, detector harness, or service was executed."
+      - "The audit classifies one limitation and does not validate the repository's other features."
+    license: MIT
