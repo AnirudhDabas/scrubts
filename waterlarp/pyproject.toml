@@ -1,0 +1,60 @@
+[build-system]
+requires = ["hatchling==1.27.0"]
+build-backend = "hatchling.build"
+
+[project]
+name = "waterlarp"
+version = "0.1.0"
+description = "Controlled text-watermark research and benchmark layer for scrub.ts"
+readme = "README.md"
+requires-python = ">=3.11,<3.14"
+license = {text = "Apache-2.0"}
+dependencies = [
+  "datasets==5.0.1",
+  "numpy==2.3.1",
+  "pydantic==2.11.7",
+  "PyYAML==6.0.3",
+  "scipy==1.17.1",
+  "tokenizers==0.22.2",
+  "torch==2.10.0",
+  "tqdm==4.67.1",
+  "transformers==5.15.0",
+]
+
+[project.optional-dependencies]
+dev = [
+  "jsonschema==4.25.1",
+  "mypy==2.3.0",
+  "pytest==9.1.1",
+  "ruff==0.16.3",
+]
+
+[project.scripts]
+waterlarp = "waterlarp.cli:main"
+
+[tool.hatch.build.targets.wheel]
+packages = ["src/waterlarp"]
+
+[tool.pytest.ini_options]
+addopts = "-ra"
+testpaths = ["tests"]
+markers = ["parity: requires or verifies an exact authoritative implementation"]
+
+[tool.ruff]
+line-length = 100
+target-version = "py311"
+
+[tool.ruff.lint]
+select = ["E", "F", "I", "UP", "B", "SIM"]
+
+[tool.ruff.lint.isort]
+known-first-party = ["waterlarp"]
+
+[tool.mypy]
+python_version = "3.11"
+strict = true
+packages = ["waterlarp"]
+
+[[tool.mypy.overrides]]
+module = ["jsonschema", "jsonschema.*", "scipy.*", "yaml"]
+ignore_missing_imports = true

@@ -59,6 +59,7 @@ Explain why behavior exists when the reason is non-obvious.
 
 ## Review priorities
 
+
 Prioritize:
 1. scientifically misleading states/claims;
 2. source-authority or conformance mistakes;

@@ -1,6 +1,50 @@
 schema_version: 2
-last_verified: 2026-08-13
+last_verified: 2026-08-14
 sources:
+- id: anthropic-claude-text-watermark
+  title: How Claude's text watermark works
+  organization: Anthropic
+  publication_date: 2026-08-14
+  kind: vendor-technical-documentation
+  url: https://www.anthropic.com/news/claude-text-watermark
+  authority: primary
+  integration: documentation
+  verified: 2026-08-14
+  retrieved: 2026-08-15T03:52:39.6392209Z
+  used_for:
+  - claude-mechanism-family
+  - claude-provider-key-state
+  - claude-detector-api-state
+  - claude-vendor-reported-claims
+  authoritative_for:
+  - Anthropic's statement that Claude's text watermark is a version of the SynthID-Text approach
+  - Anthropic's statement that detection uses its key and that its detection API is forthcoming
+  - Anthropic's descriptions of intended supported-output behavior and limitations
+  claims:
+  - Nothing is appended to the text and the watermark does not use hidden characters.
+  - Detection uses Anthropic's key and estimates the likelihood that Claude was partly involved.
+  - Short, factual, low-choice, lightly edited, and much code content can provide less signal.
+  - More Claude-authored text provides more opportunity for signal.
+  - Claude-produced translations are watermarked; light editing may retain signal while a complete rewrite can remove it.
+  - Anthropic reports no practical quality impact in its internal testing.
+  claim_classification: vendor-reported
+  claims_to_test:
+  - claim: Detectability increases with more Claude-selected text.
+    waterlarp_axes: [evidence-length, mixed-authorship, marked-fraction]
+  - claim: Factual and low-choice text provides less watermarking opportunity.
+    waterlarp_axes: [base-entropy, task-domain]
+  - claim: Code generally provides less signal where exact token choices matter.
+    waterlarp_axes: [code, base-entropy, task-domain]
+  - claim: Editing and complete rewriting affect signal differently.
+    waterlarp_axes: [transformations, quality-integrity]
+  - claim: Claude-produced translations carry the watermark.
+    waterlarp_axes: [translation, quality-integrity]
+  limitations:
+  - The article does not disclose Claude's exact deployed configuration, key, detector statistic, threshold, false-positive target, repetition handling, or API contract.
+  - It does not establish deployment parity with google-deepmind/synthid-text, Transformers, or WaterLARP.
+  - Provider-reported quality, robustness, and detectability statements are not WaterLARP measurements or replications.
+  revision: "published 2026-08-14; retrieved 2026-08-15T03:52:39.6392209Z; HTTP 200; 154,380-byte UTF-8 HTML representation; SHA-256 947cf1ebabdd41655ece7e03d2ee02694f462c18a50af6aabef78e2bcd2ffaa0"
+  license: documentation-terms; metadata, hash, and project-authored notes only
 - id: anthropic-claude-marking
   title: How Claude marks AI-generated content
   organization: Anthropic
@@ -8,23 +52,40 @@ sources:
   url: https://support.claude.com/en/articles/16266773-how-claude-marks-ai-generated-content
   authority: primary
   integration: documentation
-  verified: 2026-08-12
+  verified: 2026-08-14
+  retrieved: 2026-08-15T03:52:39.6392209Z
   used_for:
   - claude-scope
   - claude-limitations
   claims:
-  - Supported generated text carries embedded watermarks applied at the model level.
+  - Supported Claude-generated text may contain embedded watermarks applied at the model level.
   - Supported generated files carry signed C2PA provenance metadata where supported.
   - Anthropic intends to support users and third parties in detecting these marks.
   - A detected mark indicates content may have been processed by Claude.
   - Absence of a detected mark does not establish that content was not AI-generated or processed.
   limitations:
-  - Technical details of the text-watermark detection mechanisms are forthcoming;
-    the underlying algorithm and detection details are not public.
-  - The source does not identify KGW, SynthID, green-list token biasing, or any
-    other specific statistical watermark algorithm as Claude's mechanism.
-  revision: "retrieved 2026-08-12; HTTP representation 336,874 bytes; decoded HTML UTF-8 SHA-256 07c131ea092d782711edf40c35b0251c38bfaeb9280cc6c1ed96f86e348fd5d5"
-  license: documentation-terms
+  - Detection details remain forthcoming; this Help Center source does not publish a detector, key, configuration, threshold, or API contract.
+  - Heavy editing, paraphrasing, translation of existing marked text, mixing, and short passages can make a mark undetectable; lack of detection is not absence or human authorship.
+  revision: "retrieved 2026-08-15T03:52:39.6392209Z; HTTP 200; 338,075-byte UTF-8 HTML representation; SHA-256 01de813d13cd0de0b962da05819265dab64e291b877bcd8560b82b9be82a7277; detection details still forthcoming"
+  license: documentation-terms; metadata, hash, and project-authored notes only
+- id: eu-ai-transparency-code-2026
+  title: Code of Practice on Transparency of AI-generated Content
+  organization: European Commission, Directorate-General for Communications Networks, Content and Technology
+  kind: code-of-practice
+  url: https://digital-strategy.ec.europa.eu/en/policies/code-practice-ai-generated-content
+  authority: primary-policy
+  integration: policy-context-only
+  verified: 2026-08-14
+  retrieved: 2026-08-15T03:52:39.6392209Z
+  used_for:
+  - eu-ai-act-article-50-marking-context
+  - provider-marking-and-detection-context
+  authoritative_for:
+  - The Commission's description of the voluntary code and its relationship to Article 50 transparency obligations
+  not_authoritative_for:
+  - Claude or SynthID mechanism, key, detector, configuration, or parity semantics
+  revision: "policy page last updated 2026-07-31; retrieved 2026-08-15T03:52:39.6392209Z; HTTP 200; 64,429-byte UTF-8 HTML representation; SHA-256 733f89e80616607967682ee4c0a2c7d68b696a3226c0ee5217a2d6813fea444d; linked final-code document 1,213,943 bytes, SHA-256 7bd22c5a3c56eaefda27a5bf7a6118198ef2a9c9255241bd97abf7cdedf9bc28"
+  license: European Commission reuse policy applies subject to source-specific notices; metadata and project-authored notes only
 - id: c2pa-spec-2.4
   title: C2PA Technical Specification 2.4
   organization: Coalition for Content Provenance and Authenticity
@@ -286,7 +347,39 @@ sources:
   used_for:
   - waterlarp-baseline
   license: Apache-2.0
-  revision: pin-when-integrated
+  revision: 82922516930c02f8aa322765defdb5863d07a00e
+  retrieved: 2026-08-13
+  relevant_paths:
+  - README.md
+  - extended_watermark_processor.py
+  - alternative_prf_schemes.py
+  artifact_sha256:
+    README.md: d361baf6a658e6ee4bee434a685bcf81bbcd4d79b3e91d1d4b5920167665572a
+    extended_watermark_processor.py: fc3469e677ba3f2a0e4cdf5a7cae2852d8d423c02cde395cc1e038fca42038a1
+    alternative_prf_schemes.py: 51c854949c8e9309208dc6e57e2f9edbb8f2d90f0ff61edcd4ed2ef890e19ddc
+  authoritative_for:
+  - reference KGW generation, green-list, repeated-ngram, statistic, and CPU/CUDA RNG semantics
+  not_authoritative_for:
+  - Claude, another provider deployment, or secret deployment keys
+- id: kgw-reliability
+  title: On the Reliability of Watermarks for Large Language Models
+  authors:
+  - John Kirchenbauer
+  - Jonas Geiping
+  - Yuxin Wen
+  - et al.
+  year: 2024
+  venue: ICLR 2024
+  url: https://openreview.net/forum?id=DEJIDCmWOz
+  code: https://github.com/jwkirchenbauer/lm-watermarking
+  authority: primary
+  integration: specification-and-parity
+  license: paper-terms; code Apache-2.0
+  revision: 82922516930c02f8aa322765defdb5863d07a00e
+  used_for:
+  - robust KGW selfhash recommendation
+  - repeated-ngram null validity
+  - edit robustness threat model
 - id: unigram-watermark
   title: Provable Robust Watermarking for AI-Generated Text
   authors:
@@ -322,7 +415,45 @@ sources:
   - waterlarp-baseline
   - calibration-methodology
   license: Apache-2.0-software; verify non-code materials separately
-  revision: pin-when-integrated
+  doi: 10.1038/s41586-024-08025-4
+  venue: Nature 634, 818-823
+  revision: addb4a158143c7c6851a1308f78b89fceed59683
+  retrieved: 2026-08-13
+  relevant_paths:
+  - src/synthid_text/detector_mean.py
+  - src/synthid_text/logits_processing.py
+  - src/synthid_text/hashing_function.py
+  artifact_sha256:
+    src/synthid_text/detector_mean.py: 969b63dd17f62867dbcc74c0ad7ff13be84f9dafec21e796f09b8f4cf782749e
+    src/synthid_text/logits_processing.py: 30dfa0d1783c6ffe10db97af584a5826c5d95422f74960aec2fb9f8a7bb8b39f
+    src/synthid_text/hashing_function.py: 826fa9ab932249643b145a88d764ed4efc43a9d32522a6fbeacdd5d87a3d1f26
+  authoritative_for:
+  - reference Weighted Mean, Mean, Bayesian, repetition masks, and detector training semantics
+  not_authoritative_for:
+  - deployed Gemini keys, configuration, hashing, or provider attribution
+  - Claude deployment keys, configuration, detector, threshold, or provider parity
+- id: synthid-text-transformers
+  title: Official Transformers SynthID Text implementation
+  organization: Hugging Face
+  kind: official-integration
+  url: https://github.com/huggingface/transformers
+  authority: primary
+  integration: dependency-and-parity
+  license: Apache-2.0
+  revision: 5eddc12edfaf8cafde8c9bae4ccb12f8a139b4f9
+  tag: v5.15.0
+  retrieved: 2026-08-13
+  relevant_paths:
+  - src/transformers/generation/logits_process.py
+  - src/transformers/generation/configuration_utils.py
+  artifact_sha256:
+    src/transformers/generation/logits_process.py: c5b5d5666576b19e19a09b99b55806ea009dd8e999892f7a8d2d7876dbfc2002
+    src/transformers/generation/configuration_utils.py: 20cb20f05f1867617e859c6105505fd5d8c81ae91e0810ad8cda997c37c10727
+  authoritative_for:
+  - released Transformers generation API and reference hashing disclaimer
+  not_authoritative_for:
+  - Gemini App hashing or deployment configuration
+  - Claude deployment configuration, provider key, detector, or provider parity
 - id: markllm
   title: MarkLLM
   organization: THU-BPM and collaborators
@@ -334,7 +465,186 @@ sources:
   - taxonomy
   - baseline-validation
   license: Apache-2.0
-  revision: pin-when-integrated
+  revision: c45ddc40f7b761beabe55a1b8dc4690e531d1c6d
+  retrieved: 2026-08-13
+  not_authoritative_for:
+  - KGW or SynthID behavior where original author implementations exist
+- id: waterbench
+  title: 'WaterBench: Towards Holistic Evaluation of Watermarks for Large Language Models'
+  organization: THU-KEG
+  kind: paper+benchmark
+  url: https://github.com/THU-KEG/WaterBench
+  authority: primary-methodology
+  integration: methodology-only
+  license: MIT
+  revision: 8f3d779d66518a7b90ce1aad1fabaeb13cfca548
+  retrieved: 2026-08-13
+  used_for:
+  - matched-strength calibration
+  - task and quality structure
+  not_authoritative_for:
+  - original watermark mechanism behavior
+- id: entrobench
+  title: EntroBench
+  organization: authors of EntroBench
+  kind: paper+benchmark
+  url: https://github.com/py-qin/EntroBench
+  authority: primary-methodology
+  integration: methodology-and-formula-parity
+  license: Apache-2.0
+  revision: 375d40601826e775b4bd7d790a19563b477bc5b6
+  retrieved: 2026-08-13
+  relevant_paths:
+  - dataset_level_entropy.py
+  authoritative_for:
+  - benchmark entropy regimes, operation evaluation, and its own threshold protocol
+  not_authoritative_for:
+  - deployment-style fixed-clean persistence or original mechanism behavior
+  formula:
+    spike_entropy: sum_k p_k/(1+z*p_k)
+    z: 0.7615941589914151
+- id: waterseeker
+  title: 'WaterSeeker: Pioneering Efficient Detection of Watermarked Segments in Large Documents'
+  venue: Findings of NAACL 2025
+  url: https://aclanthology.org/2025.findings-naacl.156/
+  code: https://github.com/THU-BPM/WaterSeeker
+  authority: primary
+  integration: localization-methodology
+  license: no repository license file found; paper terms govern paper
+  revision: 01ee6d995805de8e475f639f789d857dbad4fe72
+  retrieved: 2026-08-13
+  used_for:
+  - partial-span dataset construction
+  - full-text, fixed-window, WinMax taxonomy
+  - localization IoU
+  limitations:
+  - Code is not copied or adapted because no repository license file was found.
+- id: uwbench
+  title: Analyzing and Evaluating Unbiased Language Model Watermark
+  authors:
+  - Yihan Wu
+  - Xuehao Cui
+  - Ruibo Chen
+  - Heng Huang
+  year: 2025
+  kind: paper
+  url: https://arxiv.org/abs/2509.24048
+  authority: primary
+  integration: methodology-citation
+  license: paper-terms
+  retrieved: 2026-08-13
+  used_for:
+  - unbiasedness and repeated-query distribution preservation
+  - SPMG and fixed-key evaluation
+  - stringent-FPR, paraphrase-variance, and token-modification methodology
+  not_authoritative_for:
+  - KGW or SynthID mechanism behavior
+  limitations:
+  - The retrieved author/paper page linked no authoritative code repository; none is invented.
+- id: mark-my-words
+  title: 'Mark My Words: Analyzing and Evaluating Language Model Watermarks'
+  kind: paper+project
+  url: https://arxiv.org/abs/2312.00273
+  code: https://github.com/wagner-group/MarkMyWords
+  authority: primary
+  integration: methodology-citation
+  license: no repository license file found at pinned revision; paper terms govern paper
+  revision: 01c1b8be5d740d7b2cd4fb01a8fb81bdfc2e6a57
+  retrieved: 2026-08-13
+  used_for:
+  - quality, watermark-size, and tamper-resistance methodology
+  - attack-success versus quality-damage curves
+  not_authoritative_for:
+  - original watermark mechanism behavior where author implementations exist
+  limitations:
+  - Code is not copied or adapted because no repository license file was found.
+- id: waterpark-under-fire
+  title: 'Watermark under Fire: A Robustness Evaluation of LLM Watermarking'
+  authors:
+  - Jiacheng Liang
+  - Zian Wang
+  - Spencer Hong
+  - Shouling Ji
+  - Ting Wang
+  venue: Findings of EMNLP 2025
+  kind: paper+platform
+  url: https://aclanthology.org/2025.findings-emnlp.1148/
+  acl_anthology_id: 2025.findings-emnlp.1148
+  doi: 10.18653/v1/2025.findings-emnlp.1148
+  code: https://github.com/JACKPURCELL/WaterPark
+  authority: primary
+  integration: citation-only
+  runnable: false
+  license: no repository-wide license found at pinned revision; paper is CC-BY-4.0
+  revision: 76b66dfa604075c9c79be71dcaebb5afe652d882
+  retrieved: 2026-08-14
+  used_for:
+  - attack-knowledge and capability taxonomy
+  not_authoritative_for:
+  - original watermark mechanism behavior
+  limitations:
+  - Repository code is citation-only because the pinned tree has no repository-wide license; no code is copied, adapted, or executed.
+  - JACKPURCELL/sok-llm-watermark redirects to the author-linked JACKPURCELL/WaterPark repository.
+- id: sandcastles-in-storm
+  title: 'Sandcastles in the Storm: Revisiting the (Im)possibility of Strong Watermarking'
+  authors:
+  - Fabrice Y Harel-Canada
+  - Boran Erol
+  - Connor Choi
+  - Jason Liu
+  - Gary Jiarui Song
+  - Nanyun Peng
+  - Amit Sahai
+  kind: paper
+  venue: ACL 2025
+  url: https://aclanthology.org/2025.acl-long.1436/
+  acl_anthology_id: 2025.acl-long.1436
+  doi: 10.18653/v1/2025.acl-long.1436
+  authority: primary
+  integration: citation-only
+  runnable: false
+  license: CC-BY-4.0 paper; no implementation repository required for this milestone
+  retrieved: 2026-08-14
+  used_for:
+  - utility-constrained robustness threat model
+  limitations:
+  - Citation-only threat-model use; it authorizes no implementation or imported quantitative claim.
+- id: confidence-smoothing-attack
+  title: Watermark Smoothing Attacks against Language Models
+  authors:
+  - Hongyan Chang
+  - Hamed Hassani
+  - Reza Shokri
+  kind: paper+project
+  venue: Findings of EMNLP 2025
+  url: https://aclanthology.org/2025.findings-emnlp.264/
+  acl_anthology_id: 2025.findings-emnlp.264
+  doi: 10.18653/v1/2025.findings-emnlp.264
+  code: https://github.com/changhongyan123/watermark_smoothing
+  authority: primary
+  integration: citation-only
+  runnable: false
+  license: Apache-2.0 code; paper is CC-BY-4.0
+  revision: 5acda5f1f27ddebe758d051537b0a59982f89b22
+  retrieved: 2026-08-14
+  used_for:
+  - adaptive smoothing threat model
+  limitations:
+  - Frozen for citation and future threat-model work only; v1 copies, adapts, and executes no smoothing attack code.
+- id: x-sir
+  title: 'Can Watermarks Survive Translation? On the Cross-lingual Consistency of Text Watermark for Large Language Models'
+  kind: paper+project
+  url: https://arxiv.org/abs/2402.14007
+  code: https://github.com/zwhe99/X-SIR
+  authority: primary
+  integration: related-work-citation
+  license: no repository license file found at pinned revision; paper terms govern paper
+  revision: 9543e14f3497749bc20ac4108e047c164b3537b4
+  retrieved: 2026-08-13
+  used_for:
+  - cross-lingual watermark and translation-robustness methodology
+  limitations:
+  - Code is not copied or adapted because no repository license file was found.
 - id: textseal
   title: TextSeal
   organization: Meta FAIR and collaborators

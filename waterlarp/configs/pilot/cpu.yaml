@@ -1,0 +1,60 @@
+schema_version: 1.0.0
+label: PILOT
+execution_status: PILOT_EXECUTED_LOCAL
+master_seed: 20260813
+model:
+  repo: HuggingFaceTB/SmolLM2-135M
+  revision: 93efa2f097d58c2a74874c7e644dbc9b0cee75a2
+  tokenizer_revision: 93efa2f097d58c2a74874c7e644dbc9b0cee75a2
+  license: Apache-2.0
+  dtype: float32
+  device: cpu
+  rationale: >-
+    A current 135M-parameter causal LM is the largest conservative choice for the
+    observed CPU-only host with about 3 GiB available RAM. It exposes logits,
+    supports Transformers generation, and is not used as a paper headline model.
+tasks:
+  - dataset: allenai/c4
+    revision: 1588ec454efa1a09f29cd18ddd04fe05fc8653a2
+    regime: high
+    sample_count_per_split: 2
+  - dataset: openai/gsm8k
+    revision: 740312add88f781978c0658806c59bc2815b9866
+    regime: medium
+    sample_count_per_split: 2
+  - dataset: google-research-datasets/mbpp
+    revision: 4bb6404fdc6cacfda99d4ac4205087b89d32030c
+    regime: low
+    sample_count_per_split: 2
+lengths: [32, 64]
+schemes:
+  - reference.kgw
+  - reference.synthid_text
+modes: [authoritative_default]
+target_fprs: [0.01]
+threshold_semantics:
+  - fixed_clean_threshold
+  - operation_conditioned_threshold
+transforms:
+  - name: clean
+    strengths: [0.0]
+  - name: random_deletion
+    strengths: [0.1]
+mixed_authorship:
+  marked_fractions: [0.25, 0.5]
+  layouts: [contiguous, separated]
+window_search:
+  coordinate_system: TOKEN
+  window_size: 32
+  stride: 8
+  valid_window_policy: all_complete_half_open_windows
+negative_controls:
+  primary: same_model_same_task_same_decoding_same_length
+  secondary: natural_text_when_license_permits_cache_only
+generation:
+  do_sample: true
+  temperature: 0.8
+  top_k: 40
+  top_p: 0.95
+fpr_expectation: UNRESOLVED
+publication_status: PILOT_NOT_HEADLINE

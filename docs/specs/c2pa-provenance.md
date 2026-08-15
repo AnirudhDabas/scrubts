@@ -23,11 +23,13 @@ SHA-256 `d55caebd96206f0de667962a4bab7098c6b6468fba68f8b55bcdd3a12d1ed26d`.
 The specification is CC BY 4.0. Appendix A.8 explicitly says the method remains
 under review and may change after implementation and interoperability feedback.
 
-Anthropic's official documentation, rechecked 2026-08-12, describes embedded
-model-level text watermarks and signed C2PA file provenance as two different
-mechanisms. It names SVG, PNG, and JPG as supported-file examples and says
-third-party detection details are forthcoming. A C2PA result is therefore never
-reported as Claude embedded-text-watermark detection.
+Anthropic's official documentation describes embedded model-level text
+watermarks and signed C2PA file provenance as two different mechanisms. Its
+2026-08-14 technical article identifies the text-watermark family as a version
+of the SynthID-Text approach and says it does not append hidden characters; the
+exact provider detector remains unavailable. Neither statement changes Unicode
+or C2PA evidence semantics. A Unicode or C2PA result is therefore never reported
+as Claude embedded-text-watermark detection.
 
 ## Artifact classification
 

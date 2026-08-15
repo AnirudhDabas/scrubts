@@ -1,0 +1,97 @@
+{
+  "$schema": "https://json-schema.org/draft/2020-12/schema",
+  "$id": "https://scrubts.dev/schemas/waterlarp/authority-record-2.0.0.json",
+  "title": "WaterLARP authority record",
+  "type": "object",
+  "additionalProperties": false,
+  "required": [
+    "mechanism_name", "mechanism_version", "mechanism_authority",
+    "implementation_authority", "detector_authority", "key_provenance",
+    "threshold_provenance", "detector_training_requirement",
+    "model_logit_requirement", "guarantee_class", "authority_source_ids",
+    "detector_available", "detector_availability", "runnable",
+    "provider_deployment", "limitations"
+  ],
+  "properties": {
+    "mechanism_name": {"type": "string", "minLength": 1},
+    "mechanism_version": {"type": "string", "minLength": 1},
+    "mechanism_authority": {"$ref": "#/$defs/authorityClass"},
+    "implementation_authority": {"$ref": "#/$defs/authorityClass"},
+    "detector_authority": {"$ref": "#/$defs/authorityClass"},
+    "key_provenance": {"type": "string", "minLength": 1},
+    "threshold_provenance": {"type": "string", "minLength": 1},
+    "detector_training_requirement": {"type": "string", "minLength": 1},
+    "model_logit_requirement": {"type": "boolean"},
+    "guarantee_class": {
+      "enum": ["DISTORTIONARY", "DISTRIBUTION_PRESERVING_IN_EXPECTATION", "UNBIASED", "NONE_CLAIMED", "UNDOCUMENTED"]
+    },
+    "authority_source_ids": {"type": "array", "minItems": 1, "uniqueItems": true, "items": {"type": "string"}},
+    "detector_available": {"type": "boolean"},
+    "detector_availability": {
+      "enum": ["AVAILABLE", "ANNOUNCED_FORTHCOMING", "UNAVAILABLE"]
+    },
+    "runnable": {"type": "boolean"},
+    "provider_deployment": {
+      "oneOf": [
+        {"type": "null"},
+        {"$ref": "#/$defs/providerDeployment"}
+      ]
+    },
+    "limitations": {"type": "array", "minItems": 1, "items": {"type": "string"}}
+  },
+  "allOf": [
+    {
+      "if": {"properties": {"detector_available": {"const": true}}},
+      "then": {"properties": {"detector_availability": {"const": "AVAILABLE"}}},
+      "else": {
+        "properties": {
+          "detector_availability": {
+            "enum": ["ANNOUNCED_FORTHCOMING", "UNAVAILABLE"]
+          }
+        }
+      }
+    },
+    {
+      "if": {"properties": {"runnable": {"const": true}}},
+      "then": {
+        "properties": {
+          "detector_available": {"const": true},
+          "detector_availability": {"const": "AVAILABLE"}
+        }
+      }
+    }
+  ],
+  "$defs": {
+    "authorityClass": {
+      "enum": ["PUBLIC_REFERENCE", "PUBLIC_MECHANISM_PRIVATE_KEY", "PROVIDER_GATED", "UNDOCUMENTED_PROVIDER", "THIRD_PARTY_REIMPLEMENTATION"]
+    },
+    "providerDeployment": {
+      "type": "object",
+      "additionalProperties": false,
+      "required": [
+        "provider", "publicly_disclosed_mechanism_family",
+        "mechanism_family_authority_source_ids", "exact_deployed_configuration",
+        "provider_key", "provider_detector_api_contract",
+        "exact_public_provider_detector_parity", "public_reference_family",
+        "public_reference_relationship", "runnable_exact_provider_detector"
+      ],
+      "properties": {
+        "provider": {"type": "string", "minLength": 1},
+        "publicly_disclosed_mechanism_family": {"type": "string", "minLength": 1},
+        "mechanism_family_authority_source_ids": {
+          "type": "array", "minItems": 1, "uniqueItems": true,
+          "items": {"type": "string", "minLength": 1}
+        },
+        "exact_deployed_configuration": {"const": "UNDISCLOSED"},
+        "provider_key": {"const": "PRIVATE_NOT_PUBLIC"},
+        "provider_detector_api_contract": {"const": "UNKNOWN_NOT_PUBLIC"},
+        "exact_public_provider_detector_parity": {"const": "NOT_ESTABLISHED"},
+        "public_reference_family": {"type": "string", "minLength": 1},
+        "public_reference_relationship": {
+          "const": "RELATED_FAMILY_NOT_DEPLOYMENT_PARITY"
+        },
+        "runnable_exact_provider_detector": {"const": false}
+      }
+    }
+  }
+}

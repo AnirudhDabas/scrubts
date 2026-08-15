@@ -1,0 +1,49 @@
+schema_version: 1.0.0
+label: PAPER-PLAN
+execution_status: NOT_EXECUTED
+master_seed: 20260813
+models:
+  - repo: Qwen/Qwen3-4B
+    revision: PIN_BEFORE_EXECUTION
+    role: primary_open_weight
+  - repo: google/gemma-3-4b-it
+    revision: PIN_BEFORE_EXECUTION
+    role: architecture_replication
+tasks: [c4_continuation, gsm8k, mbpp, translation]
+sample_counts:
+  generation_per_cell: 500
+  calibration_negatives_per_length_task_model: 1000
+  test_positives_per_cell: 500
+  test_negatives_per_cell: 1000
+lengths: [32, 64, 128, 256, 512, 1024]
+seeds: [20260813, 20260814, 20260815]
+schemes: [reference.kgw, reference.synthid_text]
+modes: [authoritative_default, matched_strength]
+target_fprs: [0.01, 0.001]
+threshold_semantics: [fixed_clean_threshold, operation_conditioned_threshold]
+token_edit_strengths: [0.0, 0.01, 0.025, 0.05, 0.1, 0.2, 0.3, 0.4, 0.5]
+token_edits: [random_deletion, random_substitution, random_insertion, span_deletion, span_substitution]
+user_operations: [unicode_nfc, whitespace_normalization, bullet_formatting, sentence_deletion]
+semantic_operations:
+  names: [paraphrase, backtranslation, translation, style_transfer, heavy_summarization]
+  seeds_per_example: 3
+  operation_model: PIN_BEFORE_EXECUTION
+mixed_authorship:
+  fractions: [0.05, 0.1, 0.25, 0.5, 0.75, 1.0]
+  layouts: [contiguous, separated]
+window_search:
+  window_sizes: [32, 64, 128, 256]
+  stride_fraction: 0.25
+  calibrate_document_procedure: true
+matched_strength:
+  calibration_target_tpr: 0.98
+  calibration_target_fpr: 0.01
+  kgw_delta_grid: [0.5, 1.0, 1.5, 2.0]
+  synthid_status: UNSUPPORTED_UNLESS_COMPARABLE_GUARANTEE_PRESERVING_KNOB_IS_AUTHORIZED
+estimated_compute:
+  generated_sequences_lower_bound: 144000
+  generated_tokens_order_of_magnitude: 50000000
+  gpu_hours_order_of_magnitude: 1000_to_3000
+  raw_storage_estimate: 0.5_to_2_TiB
+  note: Estimate only; benchmark must be power-planned and recomputed before execution.
+publication_status: NOT_EXECUTED

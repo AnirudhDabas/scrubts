@@ -1,0 +1,52 @@
+{
+  "$schema": "https://json-schema.org/draft/2020-12/schema",
+  "$id": "https://scrubts.dev/schemas/waterlarp/aggregate-2.0.0.json",
+  "title": "WaterLARP aggregate result",
+  "type": "object",
+  "additionalProperties": true,
+  "required": [
+    "schema_version", "aggregate_id", "group", "run_ids", "manifest_paths",
+    "source_authority_ids", "counts", "detection", "held_out_fpr", "scores", "quality"
+  ],
+  "properties": {
+    "schema_version": {"const": "2.0.0"},
+    "aggregate_id": {"type": "string", "pattern": "^wlra1-[0-9a-f]{24}$"},
+    "run_ids": {"type": "array", "minItems": 1, "uniqueItems": true, "items": {"type": "string"}},
+    "manifest_paths": {"type": "array", "minItems": 1, "items": {"type": "string"}},
+    "source_authority_ids": {"type": "array", "minItems": 1, "uniqueItems": true, "items": {"type": "string"}},
+    "counts": {
+      "type": "object",
+      "required": ["N", "positive_N", "negative_N", "held_out_negative_N", "unresolved_N"],
+      "properties": {
+        "N": {"type": "integer", "minimum": 1},
+        "positive_N": {"type": "integer", "minimum": 0},
+        "negative_N": {"type": "integer", "minimum": 0},
+        "held_out_negative_N": {"type": "integer", "minimum": 0},
+        "unresolved_N": {"type": "integer", "minimum": 0}
+      }
+    },
+    "held_out_fpr": {
+      "oneOf": [
+        {"type": "null"},
+        {
+          "type": "object",
+          "required": [
+            "false_positive_count", "attempted_negative_count", "negative_count",
+            "unresolved_negative_count", "empirical_fpr", "confidence_interval_95",
+            "resolution_status", "target_fpr"
+          ],
+          "properties": {
+            "false_positive_count": {"type": "integer", "minimum": 0},
+            "attempted_negative_count": {"type": "integer", "minimum": 1},
+            "negative_count": {"type": "integer", "minimum": 0},
+            "unresolved_negative_count": {"type": "integer", "minimum": 0},
+            "empirical_fpr": {"type": ["number", "null"], "minimum": 0, "maximum": 1},
+            "confidence_interval_95": {"type": ["object", "null"]},
+            "resolution_status": {"enum": ["RESOLVED", "UNRESOLVED", "UNSUPPORTED"]},
+            "target_fpr": {"type": "number", "exclusiveMinimum": 0, "exclusiveMaximum": 1}
+          }
+        }
+      ]
+    }
+  }
+}

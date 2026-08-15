@@ -9,9 +9,11 @@ reference implementation, tokenizer/model revision, key/configuration, calibrate
 threshold, text length, or other prerequisites. Applying unrelated detectors to
 arbitrary pasted text and reporting a generic probability is not sound evidence.
 
-Anthropic has announced model-level Claude text watermarking for supported models,
-but scrub.ts does not currently possess a supported third-party detector with the
-required public prerequisites.
+Anthropic identifies supported Claude text watermarking as a version of the
+SynthID-Text approach. It has not published the exact deployed configuration,
+provider key, or a usable detector/API contract, so scrub.ts does not possess
+the required provider prerequisites. A detector for a related public reference
+configuration does not satisfy them.
 
 ## Decision
 

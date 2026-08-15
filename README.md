@@ -13,7 +13,11 @@ standards-backed Unicode forensics, C2PA provenance inspection, and a separate
 controlled research harness (**WaterLARP**) for public statistical watermark schemes.
 
 Anthropic documents embedded, model-level text watermarking for supported
-Claude-generated text.
+Claude-generated text and identifies the mechanism family as a version of the
+SynthID-Text approach. Anthropic has not published its exact deployed
+configuration, provider key, or usable detector/API contract. WaterLARP's
+public SynthID reference lane is related research evidence, not Claude detector
+parity.
 Until scrub.ts has a supported detector with the required prerequisites, Claude
 embedded text-watermark status is **UNKNOWN**, not absent.
 
