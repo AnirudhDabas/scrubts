@@ -866,7 +866,7 @@ fn repeated_json_is_byte_identical_and_human_success_stderr_is_empty() {
     assert!(human.status.success());
     assert!(human.stderr.is_empty());
     let output = String::from_utf8(human.stdout).expect("human stdout is UTF-8");
-    assert!(output.contains("C2PA     PRESENT      manifest store"));
+    assert!(output.contains("PRESENT         manifest store"));
     assert!(!output.contains("C2PA: yes"));
     assert!(!output.contains("AI detected"));
 }

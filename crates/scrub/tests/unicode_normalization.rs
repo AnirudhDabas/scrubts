@@ -190,9 +190,9 @@ fn raw_json_and_human_output_freeze_public_order_and_neutral_wording() {
         stderr(&human_output)
     );
     let human = stdout(&human_output);
-    assert!(human.contains("PRESENT      NFC difference"));
-    assert!(human.contains("PRESENT      NFKC difference"));
-    assert!(human.contains("first_difference={\"scalar_index\":1"));
+    assert!(human.contains("PRESENT         NFC difference"));
+    assert!(human.contains("PRESENT         NFKC difference"));
+    assert!(human.contains("first_difference  {\"scalar_index\":1"));
     assert!(!human.contains('\u{301}'));
     assert!(!human.contains('\u{fb03}'));
     let lower = human.to_ascii_lowercase();
@@ -225,25 +225,37 @@ fn complete_human_output_is_frozen_for_a_canonical_difference() {
             "\n",
             "Artifact\n",
             "  name    artifact.txt\n",
-            "  bytes   3\n",
+            "  size    3 bytes\n",
             "  sha256  bf12767b0f2a56b2190075bae8169f656e3ce8d6357d4aff184bc6c7ea48f9f6\n",
             "\n",
-            "Evidence\n",
-            "  Unicode  PRESENT      NFC difference\n",
-            "             first_difference={\"scalar_index\":0,\"original_byte_offset\":0,\"original\":{\"at_end\":false,\"scalars\":[\"U+0065\",\"U+0301\"],\"truncated\":false},\"normalized\":{\"at_end\":false,\"scalars\":[\"U+00E9\"],\"truncated\":false}}\n",
-            "             normalized_byte_length=2\n",
-            "  Unicode  PRESENT      NFKC difference\n",
-            "             first_difference={\"scalar_index\":0,\"original_byte_offset\":0,\"original\":{\"at_end\":false,\"scalars\":[\"U+0065\",\"U+0301\"],\"truncated\":false},\"normalized\":{\"at_end\":false,\"scalars\":[\"U+00E9\"],\"truncated\":false}}\n",
-            "             normalized_byte_length=2\n",
-            "  C2PA     ABSENT       text manifest wrapper\n",
-            "  Claude   UNKNOWN      embedded text watermark\n",
-            "             verifier anthropic.provider_detector (unavailable in checked authority snapshot)\n",
-            "             related reference reference.synthid_text (related family; not deployment parity)\n",
-            "             does not support claude_provider_parity\n",
+            "Observations\n",
             "\n",
-            "Boundary\n",
-            "  UNKNOWN and UNSUPPORTED are not negative findings; this report does not establish authorship or that the artifact is clean.\n",
-            "  Use --explain for the authority and inference trace.\n",
+            "  Unicode\n",
+            "    PRESENT         NFC difference\n",
+            "      first_difference  {\"scalar_index\":0,\"original_byte_offset\":0,\"original\":{\"at_end\":false,\"scalars\":[\"U+0065\",\"U+0301\"],\"truncated\":false},\"normalized\":{\"at_end\":false,\"scalars\":[\"U+00E9\"],\"truncated\":false}}\n",
+            "      normalized_byte_length  2\n",
+            "    PRESENT         NFKC difference\n",
+            "      first_difference  {\"scalar_index\":0,\"original_byte_offset\":0,\"original\":{\"at_end\":false,\"scalars\":[\"U+0065\",\"U+0301\"],\"truncated\":false},\"normalized\":{\"at_end\":false,\"scalars\":[\"U+00E9\"],\"truncated\":false}}\n",
+            "      normalized_byte_length  2\n",
+            "\n",
+            "  C2PA\n",
+            "    ABSENT          text manifest wrapper\n",
+            "\n",
+            "  Claude\n",
+            "    UNKNOWN         embedded text watermark\n",
+            "      verifier          anthropic.provider_detector\n",
+            "                        unavailable in checked authority snapshot\n",
+            "      reference         reference.synthid_text\n",
+            "                        related family; not deployment parity\n",
+            "      supports          mechanism family disclosed; provider detector unavailable\n",
+            "      does not support  Claude watermark presence/absence or provider parity\n",
+            "\n",
+            "Interpretation\n",
+            "  A Unicode PRESENT finding supports only its reported Unicode observation.\n",
+            "  It does not establish an Anthropic watermark, Claude involvement, or authorship.\n",
+            "  UNKNOWN != ABSENT / CLEAN.\n",
+            "  No aggregate authorship or artifact-clean verdict is reported.\n",
+            "  Use --explain for the complete evidence and authority chain.\n",
         )
     );
 }

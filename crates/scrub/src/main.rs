@@ -170,7 +170,11 @@ fn write_human(writer: &mut impl Write, report: &Report) -> Result<(), OutputErr
     writeln!(writer)?;
     writeln!(writer, "Artifact")?;
     writeln!(writer, "  name    {}", human_safe(report.artifact().path()))?;
-    writeln!(writer, "  bytes   {}", report.artifact().byte_length())?;
+    writeln!(
+        writer,
+        "  size    {} bytes",
+        report.artifact().byte_length()
+    )?;
     writeln!(writer, "  sha256  {}", report.artifact().content_sha256())?;
 
     let unicode: Vec<_> = report
@@ -179,20 +183,25 @@ fn write_human(writer: &mut impl Write, report: &Report) -> Result<(), OutputErr
         .filter(|finding| finding.mechanism().id().starts_with("unicode."))
         .collect();
     writeln!(writer)?;
-    writeln!(writer, "Evidence")?;
+    writeln!(writer, "Observations")?;
+    writeln!(writer)?;
+    writeln!(writer, "  Unicode")?;
     let notable_unicode: Vec<_> = unicode
         .iter()
         .copied()
         .filter(|finding| finding.status() != FindingStatus::Absent)
         .collect();
+    let has_present_unicode = notable_unicode
+        .iter()
+        .any(|finding| finding.status() == FindingStatus::Present);
     if notable_unicode.is_empty() {
         writeln!(
             writer,
-            "  Unicode  ABSENT  no listed property or normalization difference observed"
+            "    ABSENT          no listed property or normalization difference observed"
         )?;
     } else {
-        for finding in notable_unicode {
-            write_finding_summary(writer, "Unicode", finding)?;
+        for &finding in &notable_unicode {
+            write_finding_summary(writer, finding)?;
         }
     }
 
@@ -210,6 +219,8 @@ fn write_human(writer: &mut impl Write, report: &Report) -> Result<(), OutputErr
                     && finding.mechanism().id() != C2PA_MANIFEST_STORE_ID)
         })
         .collect();
+    writeln!(writer)?;
+    writeln!(writer, "  C2PA")?;
     if notable_c2pa.is_empty() {
         if let Some(wrapper) = c2pa
             .iter()
@@ -217,13 +228,13 @@ fn write_human(writer: &mut impl Write, report: &Report) -> Result<(), OutputErr
             .find(|finding| finding.mechanism().id() == C2PA_TEXT_WRAPPER_ID)
             .filter(|finding| finding.status() == FindingStatus::Absent)
         {
-            write_finding_summary(writer, "C2PA", wrapper)?;
+            write_finding_summary(writer, wrapper)?;
         } else {
-            writeln!(writer, "  C2PA     NOT_APPLICABLE")?;
+            writeln!(writer, "    NOT_APPLICABLE")?;
         }
     } else {
         for finding in notable_c2pa {
-            write_finding_summary(writer, "C2PA", finding)?;
+            write_finding_summary(writer, finding)?;
         }
     }
 
@@ -232,134 +243,293 @@ fn write_human(writer: &mut impl Write, report: &Report) -> Result<(), OutputErr
         .iter()
         .find(|finding| finding.mechanism().id() == PROVIDER_WATERMARK_ID)
     {
-        write_finding_summary(writer, "Claude", provider)?;
+        writeln!(writer)?;
+        writeln!(writer, "  Claude")?;
+        write_finding_summary(writer, provider)?;
         if provider.status() == FindingStatus::Unknown {
             let verifier = provider.trace().verifier();
-            writeln!(
+            write_summary_field(writer, "verifier", &human_safe(verifier.id()))?;
+            write_summary_continuation(
                 writer,
-                "             verifier {} ({})",
-                verifier.id(),
-                verifier_availability_label(verifier.availability())
+                verifier_availability_label(verifier.availability()),
             )?;
             if let Some(reference) = provider.trace().authority().related_reference() {
-                writeln!(
+                write_summary_field(writer, "reference", &human_safe(reference.mechanism_id()))?;
+                write_summary_continuation(
                     writer,
-                    "             related reference {} ({})",
-                    reference.mechanism_id(),
-                    reference_relationship_label(reference.relationship())
+                    reference_relationship_label(reference.relationship()),
                 )?;
             }
-            if provider
+            let supports_family = provider
+                .trace()
+                .supports()
+                .contains(&InferenceId::ProviderMechanismFamilyDisclosed);
+            let supports_unavailable = provider
+                .trace()
+                .supports()
+                .contains(&InferenceId::ProviderDetectorUnavailable);
+            if supports_family && supports_unavailable {
+                write_summary_field(
+                    writer,
+                    "supports",
+                    "mechanism family disclosed; provider detector unavailable",
+                )?;
+            }
+            let does_not_support_presence = provider
                 .trace()
                 .does_not_support()
-                .contains(&InferenceId::ClaudeProviderParity)
-            {
-                writeln!(
+                .contains(&InferenceId::ClaudeWatermarkPresent);
+            let does_not_support_absence = provider
+                .trace()
+                .does_not_support()
+                .contains(&InferenceId::ClaudeWatermarkAbsent);
+            let does_not_support_parity = provider
+                .trace()
+                .does_not_support()
+                .contains(&InferenceId::ClaudeProviderParity);
+            if does_not_support_presence && does_not_support_absence && does_not_support_parity {
+                write_summary_field(
                     writer,
-                    "             does not support {}",
-                    inference_label(InferenceId::ClaudeProviderParity)
+                    "does not support",
+                    "Claude watermark presence/absence or provider parity",
                 )?;
             }
         }
     }
 
     writeln!(writer)?;
-    writeln!(writer, "Boundary")?;
+    writeln!(writer, "Interpretation")?;
+    if has_present_unicode {
+        writeln!(
+            writer,
+            "  A Unicode PRESENT finding supports only its reported Unicode observation."
+        )?;
+        writeln!(
+            writer,
+            "  It does not establish an Anthropic watermark, Claude involvement, or authorship."
+        )?;
+    }
+    writeln!(writer, "  UNKNOWN != ABSENT / CLEAN.")?;
     writeln!(
         writer,
-        "  UNKNOWN and UNSUPPORTED are not negative findings; this report does not establish authorship or that the artifact is clean."
+        "  No aggregate authorship or artifact-clean verdict is reported."
     )?;
     writeln!(
         writer,
-        "  Use --explain for the authority and inference trace."
+        "  Use --explain for the complete evidence and authority chain."
     )?;
     Ok(())
 }
 
-fn write_finding_summary(
-    writer: &mut impl Write,
-    group: &str,
-    finding: &Finding,
-) -> Result<(), OutputError> {
+fn write_finding_summary(writer: &mut impl Write, finding: &Finding) -> Result<(), OutputError> {
     writeln!(
         writer,
-        "  {group:<9}{:<13}{}",
+        "    {:<14}  {}",
         finding.status().as_str().to_ascii_uppercase(),
-        mechanism_display_name(finding.mechanism().id())
+        human_safe(mechanism_display_name(finding.mechanism().id()))
     )?;
     if finding.status() == FindingStatus::Present {
         for evidence in finding.evidence().iter().take(2) {
-            writeln!(
-                writer,
-                "             {}={}",
-                human_safe(evidence.name()),
-                human_safe(evidence.value())
-            )?;
+            if evidence.name() == "locations"
+                && let Some(locations) = parse_unicode_locations(evidence.value())
+                && !locations.is_empty()
+            {
+                for location in locations {
+                    let abbreviation = location
+                        .abbreviation
+                        .map(|value| format!(" ({})", human_safe(value)))
+                        .unwrap_or_default();
+                    write_summary_field(
+                        writer,
+                        "evidence",
+                        &format!(
+                            "{}{} at byte offset {}, scalar offset {}",
+                            human_safe(location.code_point),
+                            abbreviation,
+                            location.byte_offset,
+                            location.scalar_offset
+                        ),
+                    )?;
+                }
+            } else if evidence.name() == "locations_truncated" && evidence.value() == "false" {
+                continue;
+            } else {
+                write_summary_field(
+                    writer,
+                    &human_safe(evidence.name()),
+                    &human_safe(evidence.value()),
+                )?;
+            }
         }
     }
     Ok(())
+}
+
+fn write_summary_field(
+    writer: &mut impl Write,
+    label: &str,
+    value: &str,
+) -> Result<(), OutputError> {
+    writeln!(writer, "      {label:<16}  {value}")?;
+    Ok(())
+}
+
+fn write_summary_continuation(writer: &mut impl Write, value: &str) -> Result<(), OutputError> {
+    writeln!(writer, "                        {value}")?;
+    Ok(())
+}
+
+#[derive(Clone, Copy)]
+struct HumanUnicodeLocation<'a> {
+    code_point: &'a str,
+    abbreviation: Option<&'a str>,
+    byte_offset: &'a str,
+    scalar_offset: &'a str,
+}
+
+fn parse_unicode_locations(value: &str) -> Option<Vec<HumanUnicodeLocation<'_>>> {
+    if value == "[]" {
+        return Some(Vec::new());
+    }
+    let inner = value.strip_prefix("[{")?.strip_suffix("}]")?;
+    inner.split("},{").map(parse_unicode_location).collect()
+}
+
+fn parse_unicode_location(value: &str) -> Option<HumanUnicodeLocation<'_>> {
+    let value = value.strip_prefix("\"code_point\":\"")?;
+    let (code_point, value) = value.split_once('"')?;
+    if code_point.len() <= 2
+        || !code_point.starts_with("U+")
+        || !code_point[2..]
+            .chars()
+            .all(|character| character.is_ascii_hexdigit())
+    {
+        return None;
+    }
+
+    let (abbreviation, value) = if let Some(value) = value.strip_prefix(",\"abbreviation\":\"") {
+        let (abbreviation, value) = value.split_once('"')?;
+        if abbreviation.is_empty()
+            || !abbreviation
+                .chars()
+                .all(|character| character.is_ascii_uppercase())
+        {
+            return None;
+        }
+        (Some(abbreviation), value)
+    } else {
+        (None, value)
+    };
+
+    let value = value.strip_prefix(",\"byte_offset\":")?;
+    let (byte_offset, scalar_offset) = value.split_once(",\"scalar_offset\":")?;
+    if byte_offset.is_empty()
+        || scalar_offset.is_empty()
+        || !byte_offset
+            .chars()
+            .all(|character| character.is_ascii_digit())
+        || !scalar_offset
+            .chars()
+            .all(|character| character.is_ascii_digit())
+    {
+        return None;
+    }
+
+    Some(HumanUnicodeLocation {
+        code_point,
+        abbreviation,
+        byte_offset,
+        scalar_offset,
+    })
 }
 
 fn write_explain(writer: &mut impl Write, report: &Report) -> Result<(), OutputError> {
     write_human(writer, report)?;
     writeln!(writer)?;
-    writeln!(writer, "Evidence trace")?;
+    writeln!(writer, "Complete trace")?;
     for finding in report.findings() {
         writeln!(writer)?;
         writeln!(
             writer,
-            "{} [{}]",
-            mechanism_display_name(finding.mechanism().id()),
-            finding.mechanism().id()
+            "{}",
+            human_safe(mechanism_display_name(finding.mechanism().id()))
         )?;
-        writeln!(writer, "  status        {}", finding.status())?;
-        writeln!(
+        write_trace_field(writer, "mechanism", &human_safe(finding.mechanism().id()))?;
+        write_trace_field(
             writer,
-            "  observation   {}",
-            observation_label(finding.trace().observation())
+            "status",
+            &finding.status().as_str().to_ascii_uppercase(),
+        )?;
+        write_trace_field(
+            writer,
+            "observation",
+            observation_label(finding.trace().observation()),
         )?;
         if finding.evidence().is_empty() {
-            writeln!(writer, "  evidence      none retained")?;
+            write_trace_field(writer, "evidence", "none retained")?;
         } else {
             for evidence in finding.evidence() {
-                writeln!(
+                write_trace_field(
                     writer,
-                    "  evidence      {}={}",
-                    human_safe(evidence.name()),
-                    human_safe(evidence.value())
+                    "evidence",
+                    &format!(
+                        "{}={}",
+                        human_safe(evidence.name()),
+                        human_safe(evidence.value())
+                    ),
                 )?;
             }
         }
         let verifier = finding.trace().verifier();
-        writeln!(
+        write_trace_field(
             writer,
-            "  verifier      {} {} ({})",
-            verifier.id(),
-            verifier.version(),
-            verifier_availability_label(verifier.availability())
+            "verifier",
+            &format!(
+                "{} {}",
+                human_safe(verifier.id()),
+                human_safe(verifier.version())
+            ),
+        )?;
+        write_trace_field(
+            writer,
+            "availability",
+            verifier_availability_label(verifier.availability()),
         )?;
         let authority = finding.trace().authority();
-        writeln!(
+        write_trace_field(
             writer,
-            "  authority     mechanism={}, implementation={}, detector={}",
-            authority_label(authority.mechanism()),
-            authority_label(authority.implementation()),
-            authority_label(authority.detector())
+            "authority",
+            &format!("mechanism {}", authority_label(authority.mechanism())),
         )?;
-        writeln!(
+        write_trace_continuation(
             writer,
-            "  sources       {}",
-            authority.source_ids().join(", ")
+            &format!(
+                "implementation {}",
+                authority_label(authority.implementation())
+            ),
         )?;
+        write_trace_continuation(
+            writer,
+            &format!("detector {}", authority_label(authority.detector())),
+        )?;
+        let sources: Vec<_> = authority
+            .source_ids()
+            .iter()
+            .map(|source| human_safe(source))
+            .collect();
+        write_trace_values(writer, "sources", &sources)?;
         if let Some(configuration) = finding.trace().configuration_identity() {
-            writeln!(writer, "  configuration {configuration}")?;
+            write_trace_field(writer, "configuration", &human_safe(configuration))?;
         }
         if let Some(reference) = authority.related_reference() {
-            writeln!(
+            write_trace_field(
                 writer,
-                "  related       {} ({})",
-                reference.mechanism_id(),
-                reference_relationship_label(reference.relationship())
+                "related reference",
+                &human_safe(reference.mechanism_id()),
+            )?;
+            write_trace_continuation(
+                writer,
+                reference_relationship_label(reference.relationship()),
             )?;
         }
         write_inferences(writer, "supports", finding.trace().supports())?;
@@ -369,13 +539,76 @@ fn write_explain(writer: &mut impl Write, report: &Report) -> Result<(), OutputE
             finding.trace().does_not_support(),
         )?;
         for limitation in finding.limitations() {
-            writeln!(writer, "  limitation    {}", human_safe(limitation))?;
+            write_wrapped_trace_field(writer, "limitation", &human_safe(limitation))?;
         }
-        writeln!(
+        write_trace_field(
             writer,
-            "  reproduce     {}",
-            finding.trace().reproduce().command().join(" ")
+            "reproduce",
+            &human_safe(&finding.trace().reproduce().command().join(" ")),
         )?;
+    }
+    Ok(())
+}
+
+fn write_trace_field(writer: &mut impl Write, label: &str, value: &str) -> Result<(), OutputError> {
+    writeln!(writer, "  {label:<18}{value}")?;
+    Ok(())
+}
+
+fn write_trace_continuation(writer: &mut impl Write, value: &str) -> Result<(), OutputError> {
+    writeln!(writer, "                    {value}")?;
+    Ok(())
+}
+
+fn write_trace_values(
+    writer: &mut impl Write,
+    label: &str,
+    values: &[String],
+) -> Result<(), OutputError> {
+    if values.is_empty() {
+        write_trace_field(writer, label, "none")?;
+    } else {
+        for (index, value) in values.iter().enumerate() {
+            if index == 0 {
+                write_trace_field(writer, label, value)?;
+            } else {
+                write_trace_continuation(writer, value)?;
+            }
+        }
+    }
+    Ok(())
+}
+
+fn write_wrapped_trace_field(
+    writer: &mut impl Write,
+    label: &str,
+    value: &str,
+) -> Result<(), OutputError> {
+    const VALUE_WIDTH: usize = 78;
+
+    let mut line = String::new();
+    let mut first = true;
+    for word in value.split_whitespace() {
+        let next_width =
+            line.chars().count() + usize::from(!line.is_empty()) + word.chars().count();
+        if !line.is_empty() && next_width > VALUE_WIDTH {
+            if first {
+                write_trace_field(writer, label, &line)?;
+                first = false;
+            } else {
+                write_trace_continuation(writer, &line)?;
+            }
+            line.clear();
+        }
+        if !line.is_empty() {
+            line.push(' ');
+        }
+        line.push_str(word);
+    }
+    if first {
+        write_trace_field(writer, label, &line)?;
+    } else if !line.is_empty() {
+        write_trace_continuation(writer, &line)?;
     }
     Ok(())
 }
@@ -385,19 +618,11 @@ fn write_inferences(
     label: &str,
     inferences: &[InferenceId],
 ) -> Result<(), OutputError> {
-    if inferences.is_empty() {
-        writeln!(writer, "  {label:<13}none")?;
-    } else {
-        for (index, inference) in inferences.iter().enumerate() {
-            writeln!(
-                writer,
-                "  {:<13}{}",
-                if index == 0 { label } else { "" },
-                inference_label(*inference)
-            )?;
-        }
-    }
-    Ok(())
+    let values: Vec<_> = inferences
+        .iter()
+        .map(|inference| inference_label(*inference).to_owned())
+        .collect();
+    write_trace_values(writer, label, &values)
 }
 
 fn mechanism_display_name(mechanism_id: &str) -> &str {

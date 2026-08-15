@@ -218,9 +218,16 @@ fn default_output_is_human_readable_and_neutral() {
 
     assert!(output.status.success(), "stderr: {}", stderr(&output));
     assert_eq!(stderr(&output), "");
-    assert!(stdout(&output).contains("PRESENT      Default_Ignorable_Code_Point"));
-    assert!(stdout(&output).contains("\"code_point\":\"U+200B\""));
-    assert!(stdout(&output).contains("Claude   UNKNOWN"));
+    assert!(stdout(&output).contains("PRESENT         Default_Ignorable_Code_Point"));
+    assert!(stdout(&output).contains("U+200B at byte offset 1, scalar offset 1"));
+    assert!(stdout(&output).contains("UNKNOWN         embedded text watermark"));
+    assert!(stdout(&output).contains("unavailable in checked authority snapshot"));
+    assert!(stdout(&output).contains("related family; not deployment parity"));
+    assert!(
+        stdout(&output)
+            .contains("does not support  Claude watermark presence/absence or provider parity")
+    );
+    assert!(stdout(&output).contains("UNKNOWN != ABSENT / CLEAN"));
     assert!(stdout(&output).contains("Use --explain"));
 
     let normalized = stdout(&output).to_ascii_lowercase();
@@ -250,11 +257,8 @@ fn human_output_reports_bidi_identity_without_rendering_the_control() {
 
     assert!(output.status.success(), "stderr: {}", stderr(&output));
     assert_eq!(stderr(&output), "");
-    assert!(stdout(&output).contains("PRESENT      Bidi_Control"));
-    assert!(stdout(&output).contains("\"code_point\":\"U+202E\""));
-    assert!(stdout(&output).contains("\"abbreviation\":\"RLO\""));
-    assert!(stdout(&output).contains("\"byte_offset\":1"));
-    assert!(stdout(&output).contains("\"scalar_offset\":1"));
+    assert!(stdout(&output).contains("PRESENT         Bidi_Control"));
+    assert!(stdout(&output).contains("U+202E (RLO) at byte offset 1, scalar offset 1"));
     assert!(!stdout(&output).contains('\u{202e}'));
 
     let normalized = stdout(&output).to_ascii_lowercase();
@@ -325,16 +329,39 @@ fn explain_projects_the_typed_provider_authority_boundary() {
     assert_eq!(stderr(&output), "");
     let explanation = stdout(&output);
     assert!(explanation.contains("anthropic.embedded_text_watermark"));
-    assert!(explanation.contains("status        unknown"));
-    assert!(explanation.contains(
-        "anthropic.provider_detector unpublished (unavailable in checked authority snapshot)"
-    ));
+    assert!(explanation.contains("status            UNKNOWN"));
+    assert!(explanation.contains("verifier          anthropic.provider_detector unpublished"));
+    assert!(explanation.contains("availability      unavailable in checked authority snapshot"));
     assert!(explanation.contains("anthropic-claude-text-watermark"));
-    assert!(explanation.contains("reference.synthid_text (related family; not deployment parity)"));
+    assert!(explanation.contains("related reference reference.synthid_text"));
+    assert!(explanation.contains("related family; not deployment parity"));
     assert!(explanation.contains("provider_detector_unavailable"));
     assert!(explanation.contains("claude_watermark_absent"));
-    assert!(!explanation.contains("status        clean"));
-    assert!(!explanation.contains("status        human"));
+    assert!(explanation.contains("does not support  artifact_clean"));
+    assert!(!explanation.contains("does not supportartifact_clean"));
+    assert!(!explanation.contains("status            CLEAN"));
+    assert!(!explanation.contains("status            HUMAN"));
+}
+
+#[test]
+fn human_and_explain_outputs_are_byte_deterministic() {
+    let artifact = TempArtifact::new("text\u{200b}".as_bytes());
+    for options in [vec![], vec!["--explain"]] {
+        let mut arguments = vec!["inspect", artifact.path().to_str().expect("UTF-8 path")];
+        arguments.extend(options);
+        let first = run(&arguments);
+        assert!(first.status.success(), "stderr: {}", stderr(&first));
+        for repetition in 0..3 {
+            let repeated = run(&arguments);
+            assert!(
+                repeated.status.success(),
+                "repetition {repetition} stderr: {}",
+                stderr(&repeated)
+            );
+            assert_eq!(repeated.stdout, first.stdout, "repetition {repetition}");
+            assert_eq!(repeated.stderr, first.stderr, "repetition {repetition}");
+        }
+    }
 }
 
 #[test]
