@@ -13,39 +13,46 @@ from typing import Any
 
 
 ROOT = Path(__file__).resolve().parents[1]
-PROOF_PATH = ROOT / "target" / "mega-a" / "proof.json"
+PROOF_PATH = ROOT / "target" / "proof" / "proof.json"
 # Keep the authoritative current-run marker writable even when the artifact
 # output directory is unavailable.  Consumers must consult this marker before
 # treating proof.json as the result of the current invocation.
-PROOF_STATE_PATH = ROOT / "target" / "mega-a-control" / "proof-state.json"
+PROOF_STATE_PATH = ROOT / "target" / "proof-control" / "proof-state.json"
 
-MEGA_A_SCOPE = frozenset(
+PROOF_SOURCE_FILES = frozenset(
     {
+        ".gitattributes",
+        ".gitignore",
         "CONFORMANCE.md",
+        "Cargo.lock",
+        "Cargo.toml",
         "Justfile",
-        "crates/scrub-report/src/lib.rs",
-        "crates/scrub/src/c2pa_provenance.rs",
-        "crates/scrub/src/main.rs",
-        "crates/scrub/src/provider_watermark.rs",
-        "crates/scrub/src/unicode_bidi_control.rs",
-        "crates/scrub/src/unicode_default_ignorable.rs",
-        "crates/scrub/src/unicode_normalization.rs",
-        "crates/scrub/tests/c2pa.rs",
-        "crates/scrub/tests/cli.rs",
-        "crates/scrub/tests/unicode_bidi_control.rs",
-        "crates/scrub/tests/unicode_default_ignorable.rs",
-        "crates/scrub/tests/unicode_normalization.rs",
+        "crates/scrub-report/Cargo.toml",
+        "crates/scrub/Cargo.toml",
+        "docs/plans/0012-mega-b-adversarial-determinism.md",
+        "docs/specs/mega-b-adversarial-determinism.md",
         "docs/specs/product-proof.md",
         "docs/specs/report-schema.md",
         "docs/plans/0011-mega-a-product-proof.md",
-        "evidence/claims.json",
-        "schemas/claims-0.1.schema.json",
-        "schemas/proof-0.1.schema.json",
-        "schemas/report-0.2.schema.json",
-        "tools/prove.py",
-        "tools/tests/test_prove.py",
+        "research/sources.yaml",
     }
 )
+PROOF_SOURCE_PREFIXES = (
+    ".github/workflows/",
+    "crates/scrub-report/src/",
+    "crates/scrub/examples/",
+    "crates/scrub/src/",
+    "crates/scrub/tests/",
+    "evidence/",
+    "fuzz/",
+    "schemas/",
+    "tools/",
+)
+
+
+def in_proof_source_scope(relative: str) -> bool:
+    relative = relative.replace("\\", "/")
+    return relative in PROOF_SOURCE_FILES or relative.startswith(PROOF_SOURCE_PREFIXES)
 
 
 def waterlarp_python() -> Path:
@@ -122,7 +129,7 @@ def repository_identity() -> dict[str, Any]:
         relative = line[3:]
         if " -> " in relative:
             relative = relative.split(" -> ", 1)[1]
-        if relative not in MEGA_A_SCOPE:
+        if not in_proof_source_scope(relative):
             continue
         path = ROOT / relative
         worktree_sha256 = sha256_file(path) if path.is_file() else None
@@ -140,7 +147,7 @@ def repository_identity() -> dict[str, Any]:
     state = "dirty" if relevant else "clean"
     staged = any(item["status"][0] not in {" ", "?"} for item in relevant)
     identity_document = {
-        "scope": "mega_a_product_proof",
+        "scope": "proof_relevant_project",
         "base_revision": base_revision,
         "state": state,
         "staged": staged,
@@ -153,7 +160,7 @@ def repository_identity() -> dict[str, Any]:
         "state": state,
         "base_revision": base_revision,
         "staged": staged,
-        "scope": "mega_a_product_proof",
+        "scope": "proof_relevant_project",
         "identity_sha256": hashlib.sha256(identity_bytes).hexdigest(),
         "paths": relevant,
     }
@@ -183,6 +190,13 @@ def source_records() -> dict[str, dict[str, Any]]:
 
 def validate_ledger(ledger: dict[str, Any]) -> dict[str, dict[str, Any]]:
     validate_with_schema(ledger, ROOT / "schemas" / "claims-0.1.schema.json")
+    for relative in (
+        "evidence/c2pa-corpus-results.json",
+        "evidence/c2pa-adversarial-results.json",
+    ):
+        validate_with_schema(
+            load_json(ROOT / relative), ROOT / "schemas" / "c2pa-replay-0.1.schema.json"
+        )
     sources = source_records()
     claims: dict[str, dict[str, Any]] = {}
     for claim in ledger["claims"]:
@@ -203,9 +217,9 @@ def validate_ledger(ledger: dict[str, Any]) -> dict[str, dict[str, Any]]:
         if command[0].startswith("internal:"):
             if command not in [["internal:claim-ledger"], ["internal:report-contract"]]:
                 raise ValueError(f"claim {claim_id} has an unknown internal oracle")
-        elif command[0] == "{waterlarp_python}":
+        elif command[0] in {"{waterlarp_python}", "{python}"}:
             if len(command) < 3:
-                raise ValueError(f"claim {claim_id} has an incomplete WaterLARP command")
+                raise ValueError(f"claim {claim_id} has an incomplete Python command")
         elif command[0] != "cargo":
             raise ValueError(f"claim {claim_id} has an unsupported executable")
     return claims
@@ -224,6 +238,8 @@ def execute(command: list[str]) -> tuple[int, str]:
     resolved = list(command)
     if resolved[0] == "{waterlarp_python}":
         resolved[0] = str(waterlarp_python())
+    elif resolved[0] == "{python}":
+        resolved[0] = sys.executable
     try:
         completed = subprocess.run(
             resolved,
@@ -363,8 +379,8 @@ def validate_proof_semantics(proof: dict[str, Any], ledger: dict[str, Any]) -> N
         raise ValueError("invalid tested source state")
     for entry in tested["paths"]:
         relative = entry["path"].replace("\\", "/")
-        if relative not in MEGA_A_SCOPE or relative.startswith("../"):
-            raise ValueError(f"tested source path is outside the Mega A scope: {relative}")
+        if not in_proof_source_scope(relative) or relative.startswith("../"):
+            raise ValueError(f"tested source path is outside the project proof scope: {relative}")
 
 
 def assemble_proof(
@@ -415,6 +431,8 @@ def assemble_proof(
             "Default proof is offline and does not execute a pinned KGW upstream checkout.",
             "Ignored local WaterLARP pilot outputs are not proof prerequisites.",
             "Local report repeatability does not establish cross-platform determinism or RFC 8785 compliance.",
+            "Cross-platform semantic equality remains pending an actual compared Windows, Linux, and macOS workflow result.",
+            "Bounded fuzz smoke is a separate CI lane and does not prove absence of bugs.",
             "A passing UNKNOWN-boundary gate does not turn UNKNOWN into a negative provider result.",
         ],
     }

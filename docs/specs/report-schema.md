@@ -73,6 +73,12 @@ repeatability does not establish cross-platform determinism.
 When `--json` is selected, stdout contains only the report JSON. Diagnostics,
 progress, and errors not represented in the report belong on stderr.
 
+Machine JSON is not a human terminal-safety projection. JSON escaping preserves
+standards-valid syntax, but Unicode bidi formatting characters may remain in
+string values. A consumer that prints untrusted fields must visibly escape
+terminal/layout/bidi controls. Human scrub output applies that contract before
+rendering.
+
 `--json --explain` emits the same structured schema 0.2 report because the
 proof trace is always part of the authoritative report. It does not add a prose
 explanation field.

@@ -1,2 +1,6 @@
 /crates/scrub/tests/fixtures/NormalizationTest-17.0.0.txt -text
 /crates/scrub/tests/fixtures/DerivedAge-17.0.0.txt -text
+/crates/scrub/tests/fixtures/c2pa/unsigned/sample.png -text
+/crates/scrub/tests/fixtures/c2pa/unsigned/sample.svg -text
+/crates/scrub/tests/fixtures/c2pa/public-testfiles/adobe-20220124-CA.jpg -text
+/crates/scrub/tests/fixtures/unicode-bidi-control-17.0.0.txt -text

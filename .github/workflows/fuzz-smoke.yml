@@ -1,0 +1,47 @@
+name: fuzz smoke
+
+on:
+  pull_request:
+  workflow_dispatch:
+
+permissions:
+  contents: read
+
+jobs:
+  bounded-libfuzzer-smoke:
+    runs-on: ubuntu-24.04
+    timeout-minutes: 20
+    env:
+      CARGO_TERM_COLOR: never
+      RUST_TOOLCHAIN: nightly-2026-08-14
+    steps:
+      - name: Check out source
+        uses: actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1 # v7.0.1
+
+      - name: Install pinned nightly and cargo-fuzz
+        run: |
+          rustup toolchain install "$RUST_TOOLCHAIN" --profile minimal
+          cargo +"$RUST_TOOLCHAIN" install cargo-fuzz --version 0.13.2 --locked
+
+      - name: Build every fuzz target
+        run: |
+          cargo +"$RUST_TOOLCHAIN" fuzz build streaming_partition_equivalence
+          cargo +"$RUST_TOOLCHAIN" fuzz build report_json_import
+          cargo +"$RUST_TOOLCHAIN" fuzz build human_output_escape
+
+      - name: Run bounded smoke for every target
+        run: |
+          status=0
+          for target in streaming_partition_equivalence report_json_import human_output_escape; do
+            cargo +"$RUST_TOOLCHAIN" fuzz run "$target" -- -max_total_time=20 -max_len=65536 || status=$?
+          done
+          exit "$status"
+
+      - name: Upload crash and timeout artifacts
+        if: failure()
+        uses: actions/upload-artifact@043fb46d1a93c77aae656e7c1c64a875d1fc6a0a # v7.0.1
+        with:
+          name: fuzz-crash-artifacts
+          path: fuzz/artifacts
+          if-no-files-found: warn
+          retention-days: 14

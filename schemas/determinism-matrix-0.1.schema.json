@@ -1,0 +1,40 @@
+{
+  "$schema": "https://json-schema.org/draft/2020-12/schema",
+  "$id": "https://scrub.ts/schemas/determinism-matrix-0.1.schema.json",
+  "title": "scrub cross-platform semantic-digest comparison",
+  "type": "object",
+  "additionalProperties": false,
+  "required": ["schema_version", "project_revision", "platforms", "fixtures", "equality_status", "allowed_capability_differences"],
+  "properties": {
+    "schema_version": {"const": "0.1"},
+    "project_revision": {"type": "string", "pattern": "^[0-9a-f]{40}$"},
+    "platforms": {"const": ["linux", "macos", "windows"]},
+    "equality_status": {"enum": ["ESTABLISHED", "NOT_EQUAL"]},
+    "allowed_capability_differences": {"type": "array", "maxItems": 0},
+    "fixtures": {
+      "type": "array",
+      "minItems": 1,
+      "items": {
+        "type": "object",
+        "additionalProperties": false,
+        "required": ["fixture_id", "input_sha256", "expected_capability", "semantic_digests", "equal"],
+        "properties": {
+          "fixture_id": {"type": "string"},
+          "input_sha256": {"type": "string", "pattern": "^[0-9a-f]{64}$"},
+          "expected_capability": {"type": "string"},
+          "semantic_digests": {
+            "type": "object",
+            "additionalProperties": false,
+            "required": ["linux", "macos", "windows"],
+            "properties": {
+              "linux": {"type": "string", "pattern": "^[0-9a-f]{64}$"},
+              "macos": {"type": "string", "pattern": "^[0-9a-f]{64}$"},
+              "windows": {"type": "string", "pattern": "^[0-9a-f]{64}$"}
+            }
+          },
+          "equal": {"type": "boolean"}
+        }
+      }
+    }
+  }
+}

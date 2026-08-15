@@ -5,7 +5,7 @@ use std::process::{Command, Output};
 use std::sync::atomic::{AtomicU64, Ordering};
 
 use c2pa::{Context, Reader, Settings};
-use scrub_report::{Finding, FindingStatus, Report};
+use scrub_report::{Finding, FindingStatus, Report, is_forbidden_human_control};
 use sha2::{Digest, Sha256};
 
 const FIXTURES: &str = "tests/fixtures/c2pa";
@@ -344,6 +344,66 @@ fn official_tamper_vectors_do_not_collapse_signature_binding_and_structure() {
             );
         }
     }
+}
+
+#[test]
+fn selected_c2pa_attacks_rendering_payload_has_an_explicit_scrub_contract() {
+    // Exact 10-byte line from attacks/rendering.attack at pinned c2pa-attacks
+    // commit 4f750daa888d2ff93a1659fc016be584dc43ae5c.
+    let hostile_title = b"Back\x08Space";
+    let source = fixture("generated/signed.png");
+    let original = fs::read(&source).expect("generated source fixture can be read");
+    let occurrences = original
+        .windows(b"signed-png".len())
+        .filter(|window| *window == b"signed-png")
+        .count();
+    assert_eq!(occurrences, 1, "generation replacement must be unambiguous");
+
+    let mut derivative = original.clone();
+    replace_equal_length(&mut derivative, b"signed-png", hostile_title);
+    assert_eq!(derivative.len(), original.len());
+    assert_ne!(digest(&derivative), digest(&original));
+
+    let temp = TempDirectory::new();
+    let path = temp.join("rendering-backspace-title.png");
+    fs::write(&path, &derivative).expect("adversarial derivative can be written");
+    let (report, _) = report(&path);
+    assert_eq!(
+        finding(&report, "c2pa.manifest_store").status(),
+        FindingStatus::Present
+    );
+    assert_eq!(
+        finding(&report, "c2pa.manifest_validation").status(),
+        FindingStatus::Unknown,
+        "untimestamped validation must not be upgraded"
+    );
+    assert_eq!(
+        finding(&report, "c2pa.hard_binding").status(),
+        FindingStatus::Unknown
+    );
+    assert_eq!(
+        finding(&report, "c2pa.credential_trust").status(),
+        FindingStatus::NotApplicable
+    );
+
+    let human = run(&path, false);
+    assert!(
+        human.status.success(),
+        "stderr: {}",
+        String::from_utf8_lossy(&human.stderr)
+    );
+    let human = String::from_utf8(human.stdout).expect("human output is UTF-8");
+    assert!(!human.contains('\u{8}'));
+    assert!(!human.contains("BackSpace"));
+    assert!(
+        !human
+            .chars()
+            .any(|scalar| scalar != '\n' && is_forbidden_human_control(scalar))
+    );
+    assert_eq!(
+        fs::read(&source).expect("source remains readable"),
+        original
+    );
 }
 
 #[test]

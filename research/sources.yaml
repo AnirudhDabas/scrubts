@@ -128,7 +128,56 @@ sources:
   - c2pa-signature-tamper
   - c2pa-claim-ingredient-tamper
   license: "CC-BY-SA-4.0; exact license text at crates/scrub/tests/fixtures/c2pa/public-testfiles/LICENSE; SHA-256 23ee78c8bae49cf08ea2f0c84945c66b987ebe4520881fb51b3dad4fb43d07c2"
-  revision: "commit 22beccc075707475b038d8789d0136c009e43143; exact paths, lengths, Git blobs, and SHA-256 identities recorded in crates/scrub/tests/fixtures/c2pa/README.md"
+  revision: "commit 22beccc075707475b038d8789d0136c009e43143; selected files are from legacy/1.4/image/jpeg and retain C2PA 1.4 corpus identity; root README.md Git blob 76658b788071268c97bd995c6e254f6eb473d0fa; legacy/1.4/image/README.md Git blob fcb68b2cd974e709658ff4a3f7c7eb08ba0fbc6f; exact paths, lengths, Git blobs, and SHA-256 identities recorded in crates/scrub/tests/fixtures/c2pa/README.md"
+- id: c2pa-attacks-4f750daa
+  title: C2PA Attacks
+  organization: Content Authenticity Initiative
+  kind: adversarial-asset-generator
+  url: https://github.com/contentauth/c2pa-attacks
+  authority: reference
+  integration: pinned-payload-reference-and-selected-contracts
+  used_for:
+  - c2pa-hostile-rendering-field
+  - human-output-control-escaping
+  - human-output-long-field
+  license: MIT OR Apache-2.0
+  revision: "commit 4f750daa888d2ff93a1659fc016be584dc43ae5c; version 0.1.5; README.md Git blob 9a72b84863ebf0bc137e1368eecbde3983a10372; attacks/README.md Git blob bbf4371fdd56542d8bb69d36bf49665b499ae180; attacks/rendering.attack 70 bytes, SHA-256 4dc325b5f963ea4f11ba14ee2bce37413760a92e0786edb0f992b88b8dfaa158; attacks/special_characters.attack 184 bytes, SHA-256 619ac4279ceeed6d75443063f2beb51e67774da8e5b2f35404b8ed3d334fba83; attacks/ten_thousand_characters.attack 10,001 bytes, SHA-256 7538e58d7f8b58881f84f25bde01633f75d2b0cb756c676ec2a0700cd9fadcb; payload files are referenced, not copied; upstream generates assets but supplies no scrub pass/fail oracle"
+- id: cargo-fuzz-0.13.2
+  title: cargo-fuzz
+  organization: rust-fuzz project
+  kind: fuzz-tooling
+  url: https://github.com/rust-fuzz/cargo-fuzz
+  authority: reference
+  integration: pinned-ci-tool
+  used_for:
+  - mega-b-bounded-fuzz-smoke
+  license: MIT OR Apache-2.0
+  revision: "release 0.13.2; commit bf2fc668dafda5295aa6fd01825ee67b885f0f2b; Cargo.toml Git blob 3efd1a602d54bc2bcf6fe121a12e0fbb2ded94b3; README.md Git blob 4bc04287d8f82b26f23cbc79df4cbc7713a3126f; Unix-like x86-64/AArch64 nightly requirement and native-Windows exclusion checked 2026-08-15; isolated fuzz workspace pins libfuzzer-sys 0.4.13, crates.io checksum a9fd2f41a1cba099f79a0b6b6c35656cf7c03351a7bae8ff0f28f25270f929d2, license (MIT OR Apache-2.0) AND NCSA"
+- id: rust-fuzz-book-18cfe0e
+  title: Rust Fuzz Book
+  organization: rust-fuzz project
+  kind: reference-documentation
+  url: https://rust-fuzz.github.io/book/
+  code: https://github.com/rust-fuzz/book
+  authority: reference
+  integration: documentation-only
+  used_for:
+  - cargo-fuzz-target-design
+  license: repository does not declare an SPDX license; documentation is referenced, not copied
+  revision: "commit 18cfe0e68cfee717392552d3511bac08458d2c01; src/cargo-fuzz.md inspected 2026-08-15"
+- id: github-actions-docs-81ade08
+  title: GitHub Actions matrix and workflow artifact documentation
+  organization: GitHub
+  kind: official-documentation
+  url: https://docs.github.com/en/actions
+  code: https://github.com/github/docs
+  authority: primary
+  integration: workflow-design-reference
+  used_for:
+  - cross-platform-determinism-matrix
+  - cross-job-result-artifacts
+  license: CC-BY-4.0
+  revision: "github/docs commit 81ade08c26f13325c0cde8a23cd3bfb85bd0778e; data/reusables/actions/jobs/about-matrix-strategy.md Git blob 9032407e18ed93fe9d2e150b333b75b209bffc9f; content/actions/concepts/workflows-and-actions/workflow-artifacts.md Git blob 244a6a02767bb48cb0043b579eefb3a88c112091; workflow actions pin checkout v7.0.1 commit 3d3c42e5aac5ba805825da76410c181273ba90b1, upload-artifact v7.0.1 commit 043fb46d1a93c77aae656e7c1c64a875d1fc6a0a, and download-artifact v8.0.1 commit 3e5f45b2cfb9172054b4087a40e8e0b5a5461e7c"
 - id: c2pa-text-3.0.0-cross-check
   title: c2pa-text
   organization: EncypherAI contributors

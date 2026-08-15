@@ -101,7 +101,7 @@
         "state": { "enum": ["clean", "dirty"] },
         "base_revision": { "type": "string", "pattern": "^[0-9a-f]{40}$" },
         "staged": { "type": "boolean" },
-        "scope": { "const": "mega_a_product_proof" },
+        "scope": { "const": "proof_relevant_project" },
         "identity_sha256": { "type": "string", "pattern": "^[0-9a-f]{64}$" },
         "paths": {
           "type": "array",

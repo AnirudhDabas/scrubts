@@ -5,6 +5,37 @@ use std::str::FromStr;
 
 use serde::{Deserialize, Serialize};
 
+/// Returns whether a scalar must be represented visibly in human output.
+///
+/// This covers terminal controls, layout-changing separators, and the Unicode
+/// bidirectional formatting controls that can reorder surrounding labels.
+pub fn is_forbidden_human_control(scalar: char) -> bool {
+    scalar.is_control()
+        || matches!(
+            scalar,
+            '\u{061c}'
+                | '\u{200e}'
+                | '\u{200f}'
+                | '\u{2028}'..='\u{202e}'
+                | '\u{2066}'..='\u{2069}'
+        )
+}
+
+/// Encodes untrusted text for a plain human terminal projection.
+pub fn human_safe(value: &str) -> String {
+    let mut output = String::with_capacity(value.len());
+    for scalar in value.chars() {
+        if is_forbidden_human_control(scalar) {
+            use std::fmt::Write as _;
+            write!(output, "\\u{{{:x}}}", u32::from(scalar))
+                .expect("writing to a String cannot fail");
+        } else {
+            output.push(scalar);
+        }
+    }
+    output
+}
+
 pub const REPORT_SCHEMA_VERSION: &str = "0.2";
 pub const SEMANTIC_REPORT_SCHEMA_VERSION: &str = "0.1";
 
@@ -1179,6 +1210,40 @@ mod tests {
                 status
             );
         }
+    }
+
+    #[test]
+    fn human_safe_visibly_escapes_terminal_layout_and_bidi_controls() {
+        let hostile = concat!(
+            "prefix",
+            "\u{1b}[31mCSI",
+            "\u{1b}]8;;https://example.invalid\u{7}OSC8\u{1b}]8;;\u{7}",
+            "\r\n\t\u{8}\u{b}\u{7f}\u{85}",
+            "\u{61c}\u{200e}\u{200f}\u{2028}\u{2029}",
+            "\u{202a}\u{202b}\u{202c}\u{202d}\u{202e}",
+            "\u{2066}\u{2067}\u{2068}\u{2069}",
+            "suffix"
+        );
+        let rendered = human_safe(hostile);
+
+        assert!(rendered.starts_with("prefix\\u{1b}[31mCSI"));
+        assert!(rendered.contains("\\u{d}\\u{a}\\u{9}\\u{8}\\u{b}\\u{7f}\\u{85}"));
+        for code in [
+            "61c", "200e", "200f", "2028", "2029", "202a", "202b", "202c", "202d", "202e", "2066",
+            "2067", "2068", "2069",
+        ] {
+            assert!(rendered.contains(&format!("\\u{{{code}}}")), "U+{code}");
+        }
+        assert!(!rendered.chars().any(is_forbidden_human_control));
+    }
+
+    #[test]
+    fn human_safe_preserves_ordinary_and_long_text_without_hidden_truncation() {
+        let ordinary = "ASCII café 界 😀";
+        assert_eq!(human_safe(ordinary), ordinary);
+
+        let long = "A".repeat(10_000);
+        assert_eq!(human_safe(&long), long);
     }
 
     #[test]

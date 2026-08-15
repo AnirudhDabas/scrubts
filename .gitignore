@@ -1,5 +1,7 @@
 # Rust
 /target/
+/fuzz/target/
+/fuzz/artifacts/
 
 # Python
 **/__pycache__/

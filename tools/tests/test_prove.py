@@ -28,6 +28,10 @@ def claim() -> dict[str, object]:
 
 
 class ProofResultTests(unittest.TestCase):
+    def test_proof_scope_includes_determinism_generator(self) -> None:
+        self.assertTrue(prove.in_proof_source_scope("crates/scrub/examples/determinism.rs"))
+        self.assertFalse(prove.in_proof_source_scope("BENCHMARKS.md"))
+
     def test_zero_exit_is_the_only_path_to_pass(self) -> None:
         self.assertEqual(prove.make_gate_result(claim(), 0, "ok")["status"], "PASS")
         self.assertEqual(prove.make_gate_result(claim(), 1, "failed")["status"], "FAIL")
@@ -86,7 +90,7 @@ class ProofResultTests(unittest.TestCase):
             "project_revision": "0" * 40,
             "tested_source": {
                 "state": "clean", "base_revision": "0" * 40,
-                "staged": False, "scope": "mega_a_product_proof",
+                "staged": False, "scope": "proof_relevant_project",
                 "identity_sha256": "0" * 64, "paths": [],
             },
             "result": "PROOF_COMPLETE",

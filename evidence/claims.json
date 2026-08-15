@@ -57,6 +57,50 @@
       "limitations": ["This is project semantic/integration evidence, not an independent cryptographic C2PA implementation; C2PA evidence does not by itself establish truth or human/AI authorship."]
     },
     {
+      "claim_id": "streaming.partition_invariance",
+      "claim_text": "For the deterministic Mega B metamorphic suite, legal reader partitioning does not change canonical semantic report bytes for the exact same artifact bytes.",
+      "claim_class": "measured",
+      "status": "established",
+      "evidence_artifacts": ["crates/scrub/tests/streaming_partition.rs", "crates/scrub/src/lib.rs", "docs/plans/0012-mega-b-adversarial-determinism.md"],
+      "authority_source_ids": [],
+      "reproduce_command": ["cargo", "test", "--offline", "-p", "scrub", "--test", "streaming_partition"],
+      "expected_result": "Exhaustive small splits, fixed seeded large partitions, malformed UTF-8, Unicode scalar interiors, zero bytes, and 65,536-byte boundary cases produce identical canonical report bytes.",
+      "limitations": ["The deterministic suite establishes its specified adversarial envelope; the separate bounded fuzz lane can discover additional cases but does not prove absence of bugs."]
+    },
+    {
+      "claim_id": "terminal.output_safety",
+      "claim_text": "scrub's human-output primitive visibly represents untrusted terminal, layout, and bidi formatting controls instead of emitting them raw.",
+      "claim_class": "measured",
+      "status": "established",
+      "evidence_artifacts": ["crates/scrub-report/src/lib.rs", "crates/scrub/src/main.rs", "crates/scrub/tests/terminal_output_safety.rs"],
+      "authority_source_ids": [],
+      "reproduce_command": ["cargo", "test", "--offline", "-p", "scrub", "--test", "terminal_output_safety"],
+      "expected_result": "Primitive, complete-renderer, hostile-filename, and long-string tests pass without raw untrusted C0/C1, terminal escape, line-layout, or bidi formatting controls.",
+      "limitations": ["Renderer-owned line feeds remain output structure. Machine JSON is standards-valid machine data and is not claimed safe to print unreviewed to a terminal."]
+    },
+    {
+      "claim_id": "c2pa.external_corpus_semantics",
+      "claim_text": "scrub replays a pinned representative C2PA 1.4 public-testfile subset while preserving parse, validation, binding, and trust as separate states.",
+      "claim_class": "replicated",
+      "status": "established",
+      "evidence_artifacts": ["evidence/c2pa-replay-manifest.json", "evidence/c2pa-corpus-results.json", "schemas/c2pa-replay-0.1.schema.json", "tools/c2pa_replay.py"],
+      "authority_source_ids": ["c2pa-public-testfiles-22beccc", "c2pa-rs"],
+      "reproduce_command": ["{python}", "tools/c2pa_replay.py", "--check"],
+      "expected_result": "Vendored fixture identities match the pinned upstream revision and actual scrub statuses match the machine-readable four-layer contracts.",
+      "limitations": ["This is legacy C2PA 1.4 external-corpus integration and semantic-layer evidence through c2pa-rs 0.90.12, not independent cryptographic implementation or full C2PA 2.4 conformance."]
+    },
+    {
+      "claim_id": "c2pa.selected_adversarial_contracts",
+      "claim_text": "A selected pinned c2pa-attacks rendering payload exercises scrub's parse, UNKNOWN, trust, and human-projection contracts with an explicit oracle.",
+      "claim_class": "measured",
+      "status": "established",
+      "evidence_artifacts": ["evidence/c2pa-replay-manifest.json", "evidence/c2pa-adversarial-results.json", "crates/scrub/tests/c2pa.rs"],
+      "authority_source_ids": ["c2pa-attacks-4f750daa", "c2pa-rs"],
+      "reproduce_command": ["cargo", "test", "--offline", "-p", "scrub", "--test", "c2pa", "selected_c2pa_attacks_rendering_payload_has_an_explicit_scrub_contract"],
+      "expected_result": "The deterministic Back<BS>Space title derivative preserves store presence, does not upgrade untimestamped validation/binding or trust, and does not project raw hostile metadata into human output.",
+      "limitations": ["One selected adversarial contract does not establish general C2PA attack resistance; upstream attack generation itself supplies no scrub pass/fail oracle."]
+    },
+    {
       "claim_id": "waterlarp.source_identity",
       "claim_text": "WaterLARP records unique source IDs and pinned artifact identities for its integrated public references, including KGW.",
       "claim_class": "measured",

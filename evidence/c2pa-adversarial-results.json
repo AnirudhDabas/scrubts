@@ -1,0 +1,38 @@
+{
+  "evidence_scope": "selected_adversarial_contracts",
+  "fixtures": [
+    {
+      "attack_class": "manifest display-string layout injection",
+      "attack_source": "https://github.com/contentauth/c2pa-attacks",
+      "attack_source_path": "attacks/rendering.attack",
+      "attack_source_sha256": "4dc325b5f963ea4f11ba14ee2bce37413760a92e0786edb0f992b88b8dfaa158",
+      "contract_equal": true,
+      "fixture_id": "rendering-backspace-title",
+      "generation_identity": "replace the unique ASCII title signed-png with the equal-length upstream line Back<0x08>Space; preserve all other bytes",
+      "hostile_metadata_projected": false,
+      "human_output_control_safe": true,
+      "input_sha256": "ffd06afe9eb7513f9fa692043b912c14dc1b57ca0fd82a85e74ce07461ea7831",
+      "limitation": "The deterministic mutation invalidates signed bytes, but the untimestamped fixture prevents reproducible phase-two validation first. This case establishes only scrub's parse/UNKNOWN/projection contract, not signature rejection or general C2PA attack resistance.",
+      "scrub_binding_status": "unknown",
+      "scrub_parse_status": "present",
+      "scrub_trust_status": "not_applicable",
+      "scrub_validation_status": "unknown",
+      "upstream_revision": "4f750daa888d2ff93a1659fc016be584dc43ae5c"
+    }
+  ],
+  "schema_version": "0.1",
+  "scrub": {
+    "c2pa_dependency": "c2pa-rs 0.90.12",
+    "replay_command": [
+      "python",
+      "tools/c2pa_replay.py",
+      "--check"
+    ],
+    "version": "0.1.0"
+  },
+  "source": {
+    "attack_source": "https://github.com/contentauth/c2pa-attacks",
+    "license": "MIT OR Apache-2.0",
+    "upstream_revision": "4f750daa888d2ff93a1659fc016be584dc43ae5c"
+  }
+}

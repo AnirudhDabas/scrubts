@@ -1,0 +1,47 @@
+{
+  "schema_version": "0.1",
+  "semantic_digest_generation_command": [
+    "cargo",
+    "run",
+    "--offline",
+    "-p",
+    "scrub",
+    "--example",
+    "determinism",
+    "--",
+    "--manifest",
+    "evidence/determinism-fixtures.json",
+    "--platform",
+    "<platform>",
+    "--project-revision",
+    "<git-revision>",
+    "--output",
+    "<result-path>"
+  ],
+  "fixtures": [
+    {
+      "fixture_id": "unsigned-png",
+      "path": "crates/scrub/tests/fixtures/c2pa/unsigned/sample.png",
+      "byte_sha256": "0bd72c972c14e5fd27d8473c5599e801031576e1398f384c40c3394696a2619a",
+      "expected_capability": "PNG classification and C2PA store absence"
+    },
+    {
+      "fixture_id": "unsigned-svg",
+      "path": "crates/scrub/tests/fixtures/c2pa/unsigned/sample.svg",
+      "byte_sha256": "86a722290d12f661c619063cd8cb0137a720671f778596093bb7ac91525b18fe",
+      "expected_capability": "UTF-8 SVG classification and C2PA store absence"
+    },
+    {
+      "fixture_id": "public-c2pa-1.4-good-jpeg",
+      "path": "crates/scrub/tests/fixtures/c2pa/public-testfiles/adobe-20220124-CA.jpg",
+      "byte_sha256": "cafc48c53e651f7ba4622d1f72783827074211e42b9634cc863ec3be3c7651b3",
+      "expected_capability": "legacy C2PA 1.4 JPEG parse, validation, binding, and unknown trust"
+    },
+    {
+      "fixture_id": "unicode-bidi-control-corpus",
+      "path": "crates/scrub/tests/fixtures/unicode-bidi-control-17.0.0.txt",
+      "byte_sha256": "e3a8a319ef02c74b9dc12cb0fc5866a3b479d9db75fc5559de1dbf507122771c",
+      "expected_capability": "Unicode Bidi_Control, default-ignorable, and normalization evidence"
+    }
+  ]
+}

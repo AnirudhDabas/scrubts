@@ -377,6 +377,40 @@ fn json_uses_only_a_display_name_and_has_no_terminal_controls() {
 }
 
 #[test]
+fn bidi_filename_is_escaped_for_humans_but_json_remains_machine_data() {
+    let id = NEXT_TEMP_ID.fetch_add(1, Ordering::Relaxed);
+    let directory =
+        std::env::temp_dir().join(format!("scrub-cli-bidi-name-{}-{id}", std::process::id()));
+    fs::create_dir(&directory).expect("temporary directory can be created");
+    let path = directory.join("safe\u{202e}txt.artifact");
+    fs::write(&path, b"ordinary text").expect("temporary artifact can be written");
+
+    let human = Command::new(env!("CARGO_BIN_EXE_scrub"))
+        .arg("inspect")
+        .arg(&path)
+        .output()
+        .expect("scrub process can run");
+    assert!(human.status.success(), "stderr: {}", stderr(&human));
+    assert!(stdout(&human).contains("safe\\u{202e}txt.artifact"));
+    assert!(!stdout(&human).contains('\u{202e}'));
+
+    let json = Command::new(env!("CARGO_BIN_EXE_scrub"))
+        .arg("inspect")
+        .arg(&path)
+        .arg("--json")
+        .output()
+        .expect("scrub process can run");
+    assert!(json.status.success(), "stderr: {}", stderr(&json));
+    let report = Report::from_json(stdout(&json).trim_end())
+        .expect("machine JSON remains standards-valid")
+        .into_report();
+    assert_eq!(report.artifact().path(), "safe\u{202e}txt.artifact");
+
+    fs::remove_file(&path).expect("temporary artifact can be removed");
+    fs::remove_dir(&directory).expect("temporary directory can be removed");
+}
+
+#[test]
 fn malformed_text_is_invalid_for_unicode_but_claude_remains_unknown() {
     let artifact = TempArtifact::new(&[0xff]);
     let report = inspect_json(&artifact);

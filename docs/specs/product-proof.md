@@ -36,14 +36,15 @@ without a shell or network access. A row passes only when its internal oracle or
 subprocess succeeds. Any failed row makes the command non-zero and sets the
 overall result to `PROOF_FAILED`.
 
-The command writes deterministic-identity data to `target/mega-a/proof.json`,
+The command writes deterministic-identity data to `target/proof/proof.json`,
 validated by `schemas/proof-0.1.schema.json`. It includes the base Git revision
-and a `tested_source` identity for the relevant Mega A tracked and untracked
-source paths. A dirty worktree therefore cannot be mistaken for the base
-revision alone; unrelated untracked files and ignored build output are outside
-that identity scope.
+and a `tested_source` identity for the proof-relevant project source scope.
+That scope includes current production, test, evidence, schema, tool, fuzz, and
+workflow files while excluding unrelated human-owned files and ignored build
+or fuzz output. A dirty worktree therefore cannot be mistaken for the base
+revision alone.
 
-`target/mega-a-control/proof-state.json` records the current invocation as
+`target/proof-control/proof-state.json` records the current invocation as
 `PROOF_RUNNING`, `PROOF_COMPLETE`, or `PROOF_FAILED`. Consumers must require
 `PROOF_COMPLETE` before treating the
 canonical proof artifact as the result of the current invocation. Setup,
@@ -65,6 +66,10 @@ Default proof establishes only the rows present in the ledger. In particular:
 - ignored local WaterLARP pilot results are not prerequisites, and pilot scope
   is not benchmark evidence;
 - local report repeatability is not a Windows/Linux/macOS determinism result;
+- workflow source does not establish cross-platform equality before three
+  platform artifacts are compared;
+- bounded fuzz smoke is separate CI evidence and is not an absence-of-bugs
+  proof;
 - RFC 8785/JCS compliance is not claimed.
 - Offline Anthropic gates establish only the pinned/check source snapshot; a
   fresh official provider check is a separate prelaunch operation.

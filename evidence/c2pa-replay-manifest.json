@@ -1,0 +1,99 @@
+{
+  "schema_version": "0.1",
+  "public_corpus": {
+    "upstream_repo": "https://github.com/c2pa-org/public-testfiles",
+    "upstream_commit": "22beccc075707475b038d8789d0136c009e43143",
+    "upstream_spec_corpus_version": "C2PA 1.4 (legacy/1.4)",
+    "license": "CC-BY-SA-4.0",
+    "integration": "vendored representative subset",
+    "fixtures": [
+      {
+        "fixture_id": "public-1.4-jpeg-good-ca",
+        "local_path": "crates/scrub/tests/fixtures/c2pa/public-testfiles/adobe-20220124-CA.jpg",
+        "upstream_path": "legacy/1.4/image/jpeg/adobe-20220124-CA.jpg",
+        "upstream_sha256": "cafc48c53e651f7ba4622d1f72783827074211e42b9634cc863ec3be3c7651b3",
+        "upstream_category": "good / one parent ingredient",
+        "expected_contract": {
+          "scrub_parse_status": "present",
+          "scrub_validation_status": "present",
+          "scrub_binding_status": "present",
+          "scrub_trust_status": "unknown"
+        },
+        "unsupported_state": null,
+        "limitation": "The legacy 1.4 asset is external-corpus integration evidence. c2pa-rs performs cryptographic validation; scrub has no pinned trust roots, so valid and bound is not promoted to trusted."
+      },
+      {
+        "fixture_id": "public-1.4-jpeg-bad-data-hash",
+        "local_path": "crates/scrub/tests/fixtures/c2pa/public-testfiles/adobe-20220124-E-dat-CA.jpg",
+        "upstream_path": "legacy/1.4/image/jpeg/adobe-20220124-E-dat-CA.jpg",
+        "upstream_sha256": "dae9d121060cec4b6f27ee8acda85ad461cf75f2261d90b463319b787342d7f9",
+        "upstream_category": "bad / hard-binding hash mismatch",
+        "expected_contract": {
+          "scrub_parse_status": "present",
+          "scrub_validation_status": "invalid",
+          "scrub_binding_status": "invalid",
+          "scrub_trust_status": "not_applicable"
+        },
+        "unsupported_state": null,
+        "limitation": "A parsed manifest store is not a valid or bound claim. The result is c2pa-rs integration and scrub semantic-mapping evidence, not independent cryptographic validation."
+      },
+      {
+        "fixture_id": "public-1.4-jpeg-bad-signature",
+        "local_path": "crates/scrub/tests/fixtures/c2pa/public-testfiles/adobe-20220124-E-sig-CA.jpg",
+        "upstream_path": "legacy/1.4/image/jpeg/adobe-20220124-E-sig-CA.jpg",
+        "upstream_sha256": "0d4c2774f1b7e94b9613bb952b0a76b6a178d22ac6d206d257d2af1376cbbff2",
+        "upstream_category": "bad / signature did not validate",
+        "expected_contract": {
+          "scrub_parse_status": "present",
+          "scrub_validation_status": "unknown",
+          "scrub_binding_status": "unknown",
+          "scrub_trust_status": "not_applicable"
+        },
+        "unsupported_state": null,
+        "limitation": "scrub does not run phase-two validation without a reproducible time basis. UNKNOWN preserves that prerequisite boundary and is not acceptance of the upstream bad signature."
+      },
+      {
+        "fixture_id": "public-1.4-jpeg-bad-referenced-claim",
+        "local_path": "crates/scrub/tests/fixtures/c2pa/public-testfiles/adobe-20220124-E-clm-CAICAI.jpg",
+        "upstream_path": "legacy/1.4/image/jpeg/adobe-20220124-E-clm-CAICAI.jpg",
+        "upstream_sha256": "b3ff3f00c66602280977d3e4d962a836d33ab83953d0009f7c1e6490d0065feb",
+        "upstream_category": "bad / referenced claim missing",
+        "expected_contract": {
+          "scrub_parse_status": "present",
+          "scrub_validation_status": "unknown",
+          "scrub_binding_status": "unknown",
+          "scrub_trust_status": "not_applicable"
+        },
+        "unsupported_state": null,
+        "limitation": "scrub preserves structural presence while refusing phase-two conclusions without its reproducibility prerequisites. UNKNOWN is not a valid, bound, or trusted result."
+      }
+    ]
+  },
+  "selected_adversarial": {
+    "attack_source": "https://github.com/contentauth/c2pa-attacks",
+    "upstream_revision": "4f750daa888d2ff93a1659fc016be584dc43ae5c",
+    "license": "MIT OR Apache-2.0",
+    "cases": [
+      {
+        "case_id": "rendering-backspace-title",
+        "attack_class": "manifest display-string layout injection",
+        "attack_source_path": "attacks/rendering.attack",
+        "attack_source_sha256": "4dc325b5f963ea4f11ba14ee2bce37413760a92e0786edb0f992b88b8dfaa158",
+        "base_fixture": "crates/scrub/tests/fixtures/c2pa/generated/signed.png",
+        "base_fixture_sha256": "276e64f0ba1f0ed3cd153f5fb166fb1864fadd03fd6d3cd5427cc77fc935fdb0",
+        "generation_identity": "replace the unique ASCII title signed-png with the equal-length upstream line Back<0x08>Space; preserve all other bytes",
+        "search_hex": "7369676e65642d706e67",
+        "replacement_hex": "4261636b085370616365",
+        "expected_contract": {
+          "scrub_parse_status": "present",
+          "scrub_validation_status": "unknown",
+          "scrub_binding_status": "unknown",
+          "scrub_trust_status": "not_applicable",
+          "human_output_control_safe": true,
+          "hostile_metadata_projected": false
+        },
+        "limitation": "The deterministic mutation invalidates signed bytes, but the untimestamped fixture prevents reproducible phase-two validation first. This case establishes only scrub's parse/UNKNOWN/projection contract, not signature rejection or general C2PA attack resistance."
+      }
+    ]
+  }
+}

@@ -10,6 +10,10 @@ The four `public-testfiles/*.jpg` assets come from the C2PA official
 `legacy/1.4/image/jpeg/`. They are covered by `public-testfiles/LICENSE`
 (CC-BY-SA-4.0):
 
+The corpus identity is C2PA 1.4. Replay through scrub's later c2pa-rs/C2PA 2.4
+integration is interoperability and semantic-layer evidence, not independent
+C2PA 2.4 conformance.
+
 - `legacy/1.4/image/jpeg/adobe-20220124-CA.jpg`: Git blob
   `c0fc9ac13155427f8111e7b1d24bdbcebf59a8a3`; 178,709 bytes; SHA-256
   `cafc48c53e651f7ba4622d1f72783827074211e42b9634cc863ec3be3c7651b3`;

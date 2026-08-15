@@ -1,0 +1,128 @@
+{
+  "$schema": "https://json-schema.org/draft/2020-12/schema",
+  "$id": "https://scrub.ts/schemas/c2pa-replay-0.1.schema.json",
+  "title": "scrub C2PA external/adversarial replay result",
+  "type": "object",
+  "additionalProperties": false,
+  "required": ["schema_version", "evidence_scope", "source", "scrub", "fixtures"],
+  "properties": {
+    "schema_version": {"const": "0.1"},
+    "evidence_scope": {"enum": ["external_corpus_integration", "selected_adversarial_contracts"]},
+    "source": {"type": "object"},
+    "scrub": {"$ref": "#/$defs/scrub"},
+    "fixtures": {"type": "array", "minItems": 1}
+  },
+  "allOf": [
+    {
+      "if": {"properties": {"evidence_scope": {"const": "external_corpus_integration"}}},
+      "then": {
+        "properties": {
+          "source": {"$ref": "#/$defs/corpus_source"},
+          "fixtures": {"type": "array", "minItems": 1, "items": {"$ref": "#/$defs/corpus_fixture"}}
+        }
+      }
+    },
+    {
+      "if": {"properties": {"evidence_scope": {"const": "selected_adversarial_contracts"}}},
+      "then": {
+        "properties": {
+          "source": {"$ref": "#/$defs/adversarial_source"},
+          "fixtures": {"type": "array", "minItems": 1, "items": {"$ref": "#/$defs/adversarial_fixture"}}
+        }
+      }
+    }
+  ],
+  "$defs": {
+    "sha256": {"type": "string", "pattern": "^[0-9a-f]{64}$"},
+    "status": {"enum": ["present", "absent", "unknown", "unsupported", "invalid", "not_applicable"]},
+    "scrub": {
+      "type": "object",
+      "additionalProperties": false,
+      "required": ["version", "c2pa_dependency", "replay_command"],
+      "properties": {
+        "version": {"type": "string", "minLength": 1},
+        "c2pa_dependency": {"const": "c2pa-rs 0.90.12"},
+        "replay_command": {"type": "array", "minItems": 1, "items": {"type": "string", "minLength": 1}}
+      }
+    },
+    "corpus_source": {
+      "type": "object",
+      "additionalProperties": false,
+      "required": ["integration", "license", "upstream_commit", "upstream_repo", "upstream_spec_corpus_version"],
+      "properties": {
+        "integration": {"const": "vendored representative subset"},
+        "license": {"const": "CC-BY-SA-4.0"},
+        "upstream_commit": {"type": "string", "pattern": "^[0-9a-f]{40}$"},
+        "upstream_repo": {"type": "string", "minLength": 1},
+        "upstream_spec_corpus_version": {"type": "string", "minLength": 1}
+      }
+    },
+    "corpus_fixture": {
+      "type": "object",
+      "additionalProperties": false,
+      "required": [
+        "fixture_id", "input_sha256", "license", "limitation", "scrub_binding_status",
+        "scrub_parse_status", "scrub_trust_status", "scrub_validation_status",
+        "unsupported_state", "upstream_category", "upstream_commit", "upstream_path",
+        "upstream_repo", "upstream_sha256",
+        "upstream_spec_corpus_version", "contract_equal"
+      ],
+      "properties": {
+        "fixture_id": {"type": "string", "minLength": 1},
+        "input_sha256": {"$ref": "#/$defs/sha256"},
+        "license": {"const": "CC-BY-SA-4.0"},
+        "limitation": {"type": "string", "minLength": 1},
+        "scrub_binding_status": {"$ref": "#/$defs/status"},
+        "scrub_parse_status": {"$ref": "#/$defs/status"},
+        "scrub_trust_status": {"$ref": "#/$defs/status"},
+        "scrub_validation_status": {"$ref": "#/$defs/status"},
+        "unsupported_state": {"type": ["string", "null"]},
+        "upstream_category": {"type": "string", "minLength": 1},
+        "upstream_commit": {"type": "string", "pattern": "^[0-9a-f]{40}$"},
+        "upstream_path": {"type": "string", "minLength": 1},
+        "upstream_repo": {"type": "string", "minLength": 1},
+        "upstream_sha256": {"$ref": "#/$defs/sha256"},
+        "upstream_spec_corpus_version": {"type": "string", "minLength": 1},
+        "contract_equal": {"const": true}
+      }
+    },
+    "adversarial_source": {
+      "type": "object",
+      "additionalProperties": false,
+      "required": ["attack_source", "license", "upstream_revision"],
+      "properties": {
+        "attack_source": {"type": "string", "minLength": 1},
+        "license": {"const": "MIT OR Apache-2.0"},
+        "upstream_revision": {"type": "string", "pattern": "^[0-9a-f]{40}$"}
+      }
+    },
+    "adversarial_fixture": {
+      "type": "object",
+      "additionalProperties": false,
+      "required": [
+        "fixture_id", "attack_class", "attack_source", "attack_source_path", "attack_source_sha256",
+        "generation_identity", "input_sha256", "limitation", "scrub_binding_status",
+        "scrub_parse_status", "scrub_trust_status", "scrub_validation_status",
+        "upstream_revision", "human_output_control_safe", "hostile_metadata_projected", "contract_equal"
+      ],
+      "properties": {
+        "fixture_id": {"type": "string", "minLength": 1},
+        "attack_class": {"type": "string", "minLength": 1},
+        "attack_source": {"type": "string", "minLength": 1},
+        "attack_source_path": {"type": "string", "minLength": 1},
+        "attack_source_sha256": {"$ref": "#/$defs/sha256"},
+        "generation_identity": {"type": "string", "minLength": 1},
+        "input_sha256": {"$ref": "#/$defs/sha256"},
+        "limitation": {"type": "string", "minLength": 1},
+        "scrub_binding_status": {"$ref": "#/$defs/status"},
+        "scrub_parse_status": {"$ref": "#/$defs/status"},
+        "scrub_trust_status": {"$ref": "#/$defs/status"},
+        "scrub_validation_status": {"$ref": "#/$defs/status"},
+        "upstream_revision": {"type": "string", "pattern": "^[0-9a-f]{40}$"},
+        "human_output_control_safe": {"const": true},
+        "hostile_metadata_projected": {"const": false},
+        "contract_equal": {"const": true}
+      }
+    }
+  }
+}
