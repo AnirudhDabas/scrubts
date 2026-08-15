@@ -39,6 +39,11 @@ TARGET_CONFIG = {
     "aarch64-apple-darwin": ("scrub", ".tar.gz"),
     "x86_64-apple-darwin": ("scrub", ".tar.gz"),
 }
+RELEASE_SOURCE_BYTE_PATHS = (
+    "Cargo.lock",
+    "LICENSE",
+    "THIRD_PARTY_NOTICES.md",
+)
 SEMVER = r"(0|[1-9][0-9]*)\.(0|[1-9][0-9]*)\.(0|[1-9][0-9]*)(?:-[0-9A-Za-z-]+(?:\.[0-9A-Za-z-]+)*)?(?:\+[0-9A-Za-z-]+(?:\.[0-9A-Za-z-]+)*)?"
 SEMVER_RE = re.compile(rf"^{SEMVER}$")
 TAG_RE = re.compile(rf"^v{SEMVER}$")
@@ -129,10 +134,14 @@ def sha256_file(path: Path) -> str:
     return hasher.hexdigest()
 
 
-def committed_cargo_lock_bytes(source_commit: str, root: Path = ROOT) -> bytes:
+def committed_release_source_bytes(
+    source_commit: str, path: str, root: Path = ROOT
+) -> bytes:
+    if path not in RELEASE_SOURCE_BYTE_PATHS:
+        raise ReleaseError(f"unknown exact-byte release source path: {path}")
     try:
         completed = subprocess.run(
-            ["git", "cat-file", "blob", f"{source_commit}:Cargo.lock"],
+            ["git", "cat-file", "blob", f"{source_commit}:{path}"],
             cwd=root,
             check=True,
             stdout=subprocess.PIPE,
@@ -140,22 +149,40 @@ def committed_cargo_lock_bytes(source_commit: str, root: Path = ROOT) -> bytes:
         )
     except (OSError, subprocess.CalledProcessError) as error:
         raise ReleaseError(
-            f"cannot read Cargo.lock from source commit {source_commit}"
+            f"cannot read {path} from source commit {source_commit}"
         ) from error
     return completed.stdout
 
 
-def ensure_clean_commit_lock_identity(
+def working_release_source_bytes(root: Path = ROOT) -> dict[str, bytes]:
+    values: dict[str, bytes] = {}
+    for path in RELEASE_SOURCE_BYTE_PATHS:
+        try:
+            values[path] = (root / path).read_bytes()
+        except OSError as error:
+            raise ReleaseError(f"cannot read exact-byte release source path: {path}") from error
+    return values
+
+
+def validate_release_source_byte_set(values: dict[str, bytes]) -> None:
+    if set(values) != set(RELEASE_SOURCE_BYTE_PATHS) or any(
+        not isinstance(value, bytes) for value in values.values()
+    ):
+        raise ReleaseError("exact-byte release source set is incomplete or invalid")
+
+
+def load_release_source_bytes(
     source_commit: str, source_tree_state: str, root: Path = ROOT
-) -> bytes:
-    working_lock = (root / "Cargo.lock").read_bytes()
+) -> dict[str, bytes]:
+    working = working_release_source_bytes(root)
     if source_tree_state == "clean_commit":
-        committed_lock = committed_cargo_lock_bytes(source_commit, root)
-        if working_lock != committed_lock:
-            raise ReleaseError(
-                "clean-commit Cargo.lock bytes disagree with the source commit blob"
-            )
-    return working_lock
+        for path in RELEASE_SOURCE_BYTE_PATHS:
+            committed = committed_release_source_bytes(source_commit, path, root)
+            if working[path] != committed:
+                raise ReleaseError(
+                    f"clean-commit {path} bytes disagree with the source commit blob"
+                )
+    return working
 
 
 def json_bytes(document: dict[str, Any]) -> bytes:
@@ -247,7 +274,11 @@ def contains_absolute_path(value: Any) -> bool:
     return bool(re.search(r"(?:^|\s)[A-Za-z]:[\\/]", value) or value.startswith("\\\\"))
 
 
-def validate_metadata(document: dict[str, Any], root: Path = ROOT) -> None:
+def validate_metadata(
+    document: dict[str, Any],
+    root: Path = ROOT,
+    release_source_bytes: dict[str, bytes] | None = None,
+) -> None:
     if not isinstance(document, dict):
         raise ReleaseError("release metadata must be an object")
     ensure_exact_keys(document, METADATA_KEYS, "release metadata")
@@ -287,7 +318,10 @@ def validate_metadata(document: dict[str, Any], root: Path = ROOT) -> None:
     for field in ("binary_sha256", "cargo_lock_sha256"):
         if not isinstance(document[field], str) or not SHA256_RE.fullmatch(document[field]):
             raise ReleaseError(f"release metadata has malformed {field}")
-    if document["cargo_lock_sha256"] != sha256_file(root / "Cargo.lock"):
+    if release_source_bytes is None:
+        release_source_bytes = working_release_source_bytes(root)
+    validate_release_source_byte_set(release_source_bytes)
+    if document["cargo_lock_sha256"] != sha256_bytes(release_source_bytes["Cargo.lock"]):
         raise ReleaseError("release metadata Cargo.lock digest disagrees with repository lock")
     if not isinstance(document["rustc_version"], str) or not RUSTC_RE.fullmatch(
         document["rustc_version"]
@@ -317,6 +351,7 @@ def build_metadata(
     cargo_version: str,
     tag: str | None,
     root: Path = ROOT,
+    release_source_bytes: dict[str, bytes] | None = None,
 ) -> dict[str, Any]:
     if target not in TARGET_CONFIG:
         raise ReleaseError(f"unknown release target: {target!r}")
@@ -324,9 +359,11 @@ def build_metadata(
         raise ReleaseError(f"release binary does not exist: {binary}")
     validate_commit(source_commit)
     version = validate_version_contract(tag, root)
-    cargo_lock_bytes = ensure_clean_commit_lock_identity(
-        source_commit, source_tree_state, root
-    )
+    if release_source_bytes is None:
+        release_source_bytes = load_release_source_bytes(
+            source_commit, source_tree_state, root
+        )
+    validate_release_source_byte_set(release_source_bytes)
     binary_name, _extension = TARGET_CONFIG[target]
     document = {
         "schema_version": SCHEMA_VERSION,
@@ -339,14 +376,14 @@ def build_metadata(
         "rust_target": target,
         "binary_filename": binary_name,
         "binary_sha256": sha256_file(binary),
-        "cargo_lock_sha256": sha256_bytes(cargo_lock_bytes),
+        "cargo_lock_sha256": sha256_bytes(release_source_bytes["Cargo.lock"]),
         "rustc_version": rustc_version,
         "cargo_version": cargo_version,
         "release_profile": "cargo --locked --release",
         "platform_vendor_signing": dict(SIGNING_STATUS),
         "limitations": list(LIMITATIONS),
     }
-    validate_metadata(document, root)
+    validate_metadata(document, root, release_source_bytes)
     return document
 
 
@@ -356,14 +393,20 @@ def expected_archive_name(version: str, target: str) -> str:
 
 
 def archive_members(
-    metadata: dict[str, Any], binary_bytes: bytes, root: Path = ROOT
+    metadata: dict[str, Any],
+    binary_bytes: bytes,
+    root: Path = ROOT,
+    release_source_bytes: dict[str, bytes] | None = None,
 ) -> tuple[str, dict[str, tuple[bytes, int]]]:
+    if release_source_bytes is None:
+        release_source_bytes = working_release_source_bytes(root)
+    validate_release_source_byte_set(release_source_bytes)
     archive_root = f"scrub-v{metadata['package_version']}-{metadata['rust_target']}"
     members = {
         f"{archive_root}/{metadata['binary_filename']}": (binary_bytes, 0o755),
-        f"{archive_root}/LICENSE": ((root / "LICENSE").read_bytes(), 0o644),
+        f"{archive_root}/LICENSE": (release_source_bytes["LICENSE"], 0o644),
         f"{archive_root}/THIRD_PARTY_NOTICES.md": (
-            (root / "THIRD_PARTY_NOTICES.md").read_bytes(),
+            release_source_bytes["THIRD_PARTY_NOTICES.md"],
             0o644,
         ),
         f"{archive_root}/RELEASE-METADATA.json": (json_bytes(metadata), 0o644),
@@ -423,6 +466,9 @@ def package_archive(
     output_dir: Path,
     root: Path = ROOT,
 ) -> Path:
+    release_source_bytes = load_release_source_bytes(
+        source_commit, source_tree_state, root
+    )
     metadata = build_metadata(
         binary=binary,
         target=target,
@@ -432,8 +478,11 @@ def package_archive(
         cargo_version=cargo_version,
         tag=tag,
         root=root,
+        release_source_bytes=release_source_bytes,
     )
-    archive_root, members = archive_members(metadata, binary.read_bytes(), root)
+    archive_root, members = archive_members(
+        metadata, binary.read_bytes(), root, release_source_bytes
+    )
     output_dir.mkdir(parents=True, exist_ok=True)
     output = output_dir / expected_archive_name(metadata["package_version"], target)
     temporary = output.with_name(output.name + ".tmp")
@@ -442,7 +491,9 @@ def package_archive(
     else:
         write_tar_gz(temporary, archive_root, members)
     temporary.replace(output)
-    inspect_archive(output, root=root)
+    inspect_archive(
+        output, root=root, expected_release_source_bytes=release_source_bytes
+    )
     return output
 
 
@@ -743,7 +794,11 @@ def inspect_tar_gz(
     return contents, modes
 
 
-def inspect_archive(path: Path, root: Path = ROOT) -> InspectedArchive:
+def inspect_archive(
+    path: Path,
+    root: Path = ROOT,
+    expected_release_source_bytes: dict[str, bytes] | None = None,
+) -> InspectedArchive:
     if path.stat().st_size > MAX_ARCHIVE_BYTES:
         raise ReleaseError("release archive exceeds the v0.1 size bound")
     _target, archive_root, canonical_names = canonical_archive_layout(path, root)
@@ -764,7 +819,10 @@ def inspect_archive(path: Path, root: Path = ROOT) -> InspectedArchive:
     metadata_name = metadata_names[0]
     metadata_bytes = contents[metadata_name]
     metadata = read_json_bytes(metadata_bytes, "RELEASE-METADATA.json")
-    validate_metadata(metadata, root)
+    if expected_release_source_bytes is None:
+        expected_release_source_bytes = working_release_source_bytes(root)
+    validate_release_source_byte_set(expected_release_source_bytes)
+    validate_metadata(metadata, root, expected_release_source_bytes)
     metadata_archive_root, expected = expected_member_names(metadata)
     if metadata_archive_root != archive_root:
         raise ReleaseError("archive root disagrees with its canonical filename")
@@ -778,11 +836,14 @@ def inspect_archive(path: Path, root: Path = ROOT) -> InspectedArchive:
     binary_bytes = contents[binary_name]
     if sha256_bytes(binary_bytes) != metadata["binary_sha256"]:
         raise ReleaseError("archive binary digest disagrees with RELEASE-METADATA.json")
-    if contents[metadata_name.rsplit("/", 1)[0] + "/LICENSE"] != (root / "LICENSE").read_bytes():
+    if (
+        contents[metadata_name.rsplit("/", 1)[0] + "/LICENSE"]
+        != expected_release_source_bytes["LICENSE"]
+    ):
         raise ReleaseError("archive LICENSE disagrees with repository LICENSE")
     if contents[metadata_name.rsplit("/", 1)[0] + "/THIRD_PARTY_NOTICES.md"] != (
-        root / "THIRD_PARTY_NOTICES.md"
-    ).read_bytes():
+        expected_release_source_bytes["THIRD_PARTY_NOTICES.md"]
+    ):
         raise ReleaseError("archive notices disagree with repository notices")
     return InspectedArchive(
         path,

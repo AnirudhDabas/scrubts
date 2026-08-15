@@ -185,9 +185,19 @@ repository immutability configuration, human publication, and immutable public
 release membership remain **NOT YET ESTABLISHED** pending future tag-mode
 GitHub execution and operator action.
 
-External preflight run `31888740599` established native package build and smoke
-on all four targets, then correctly rejected assembly because the Windows
-checkout had converted the committed root `Cargo.lock` from LF to CRLF. The
-checkout contract now marks only `/Cargo.lock` as `-text`, and clean-commit
-metadata construction requires the working lock bytes to equal the exact lock
-blob at `source_commit`. Dirty-worktree metadata retains its existing semantics.
+External preflight run `31888740599` passed native build, package, and smoke on
+all four targets. Assembly then rejected the Windows artifact because checkout
+had converted the committed root `Cargo.lock` from LF to CRLF.
+
+External preflight run `31890505072` again passed native build, package, and
+smoke on all four targets. The prior Cargo.lock blocker was resolved. Assembly
+then rejected the Windows artifact because checkout had converted the committed
+root `LICENSE` from LF to CRLF. Downloaded artifacts also proved the same latent
+checkout conversion for `THIRD_PARTY_NOTICES.md`.
+
+These remote executions exposed platform checkout-byte differences in the
+repository-owned exact-byte release inputs. The checkout contract now marks
+only `Cargo.lock`, `LICENSE`, and `THIRD_PARTY_NOTICES.md` as exact-byte release
+sources, and clean-commit packaging requires each working byte sequence to equal
+its exact blob at `source_commit`. Dirty-worktree packaging retains its existing
+semantics. Aggregate assembly remains **NOT YET ESTABLISHED**.

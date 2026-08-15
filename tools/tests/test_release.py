@@ -39,11 +39,17 @@ class ReleaseContractTests(unittest.TestCase):
     def tearDown(self) -> None:
         self.temporary.cleanup()
 
+    @staticmethod
+    def committed_source_bytes(
+        _source_commit: str, path: str, root: Path = ROOT
+    ) -> bytes:
+        return (root / path).read_bytes()
+
     def metadata(self, target: str = release.TARGETS[0]) -> dict[str, object]:
         with mock.patch.object(
             release,
-            "committed_cargo_lock_bytes",
-            return_value=(ROOT / "Cargo.lock").read_bytes(),
+            "committed_release_source_bytes",
+            side_effect=self.committed_source_bytes,
         ):
             return release.build_metadata(
                 binary=self.binary,
@@ -62,8 +68,8 @@ class ReleaseContractTests(unittest.TestCase):
         binary.write_bytes((target + "\n").encode("ascii"))
         with mock.patch.object(
             release,
-            "committed_cargo_lock_bytes",
-            return_value=(ROOT / "Cargo.lock").read_bytes(),
+            "committed_release_source_bytes",
+            side_effect=self.committed_source_bytes,
         ):
             return release.package_archive(
                 binary=binary,
@@ -139,9 +145,9 @@ class ReleaseContractTests(unittest.TestCase):
             ):
                 release.validate_version_contract(malformed)
 
-    def test_root_cargo_lock_is_not_a_git_text_path(self) -> None:
+    def test_exact_byte_release_sources_are_not_git_text_paths(self) -> None:
         completed = subprocess.run(
-            ["git", "check-attr", "text", "--", "Cargo.lock"],
+            ["git", "check-attr", "text", "--", *release.RELEASE_SOURCE_BYTE_PATHS],
             cwd=ROOT,
             check=True,
             stdout=subprocess.PIPE,
@@ -149,25 +155,110 @@ class ReleaseContractTests(unittest.TestCase):
             text=True,
             encoding="utf-8",
         )
-        self.assertEqual(completed.stdout.strip(), "Cargo.lock: text: unset")
+        self.assertEqual(
+            completed.stdout.splitlines(),
+            [f"{path}: text: unset" for path in release.RELEASE_SOURCE_BYTE_PATHS],
+        )
 
-    def test_clean_commit_requires_exact_cargo_lock_blob_bytes(self) -> None:
+    def test_clean_commit_requires_exact_release_source_blob_bytes(self) -> None:
         root = self.directory / "source"
         root.mkdir()
-        lock = root / "Cargo.lock"
-        committed = b"version = 4\n"
+        committed = {
+            "Cargo.lock": b"version = 4\n",
+            "LICENSE": b"license line\n",
+            "THIRD_PARTY_NOTICES.md": b"notice line\n",
+        }
+        for path, value in committed.items():
+            (root / path).write_bytes(value)
 
         with mock.patch.object(
-            release, "committed_cargo_lock_bytes", return_value=committed
+            release,
+            "committed_release_source_bytes",
+            side_effect=lambda _commit, path, _root: committed[path],
         ):
-            lock.write_bytes(committed)
-            release.ensure_clean_commit_lock_identity(SOURCE_COMMIT, "clean_commit", root)
+            self.assertEqual(
+                release.load_release_source_bytes(SOURCE_COMMIT, "clean_commit", root),
+                committed,
+            )
+            for path in release.RELEASE_SOURCE_BYTE_PATHS:
+                with self.subTest(path=path):
+                    (root / path).write_bytes(committed[path].replace(b"\n", b"\r\n"))
+                    with self.assertRaisesRegex(
+                        release.ReleaseError, rf"clean-commit {re.escape(path)} bytes disagree"
+                    ):
+                        release.load_release_source_bytes(
+                            SOURCE_COMMIT, "clean_commit", root
+                        )
+                    (root / path).write_bytes(committed[path])
 
-            lock.write_bytes(committed.replace(b"\n", b"\r\n"))
-            with self.assertRaisesRegex(release.ReleaseError, "Cargo.lock bytes disagree"):
-                release.ensure_clean_commit_lock_identity(
-                    SOURCE_COMMIT, "clean_commit", root
-                )
+    def test_clean_commit_fails_closed_when_a_source_blob_cannot_be_read(self) -> None:
+        root = self.directory / "source"
+        root.mkdir()
+        for path in release.RELEASE_SOURCE_BYTE_PATHS:
+            (root / path).write_bytes(b"working bytes\n")
+        with mock.patch.object(
+            release.subprocess,
+            "run",
+            side_effect=subprocess.CalledProcessError(128, ["git", "cat-file"]),
+        ), self.assertRaisesRegex(release.ReleaseError, "cannot read Cargo.lock"):
+            release.load_release_source_bytes(SOURCE_COMMIT, "clean_commit", root)
+
+    def test_dirty_worktree_accepts_release_source_bytes_that_differ_from_head(self) -> None:
+        root = self.directory / "source"
+        root.mkdir()
+        expected = {path: b"dirty working bytes\r\n" for path in release.RELEASE_SOURCE_BYTE_PATHS}
+        for path, value in expected.items():
+            (root / path).write_bytes(value)
+        with mock.patch.object(release, "committed_release_source_bytes") as committed:
+            self.assertEqual(
+                release.load_release_source_bytes(SOURCE_COMMIT, "dirty_worktree", root),
+                expected,
+            )
+        committed.assert_not_called()
+
+    def test_package_uses_validated_support_file_bytes_without_eol_conversion(self) -> None:
+        root = self.directory / "source"
+        for package in ("scrub", "scrub-report"):
+            manifest = root / "crates" / package / "Cargo.toml"
+            manifest.parent.mkdir(parents=True)
+            manifest.write_bytes(b'[package]\nversion = "0.1.0"\n')
+        source_bytes = {
+            "Cargo.lock": b"version = 4\r\n",
+            "LICENSE": b"license CRLF\r\nlicense LF\n",
+            "THIRD_PARTY_NOTICES.md": b"notices CRLF\r\nnotices LF\n",
+        }
+        for path in source_bytes:
+            (root / path).write_bytes(b"changed after validation\n")
+        with mock.patch.object(
+            release, "load_release_source_bytes", return_value=source_bytes
+        ) as load_sources:
+            archive = release.package_archive(
+                binary=self.binary,
+                target=release.TARGETS[0],
+                source_commit=SOURCE_COMMIT,
+                source_tree_state="clean_commit",
+                rustc_version=RUSTC_VERSION,
+                cargo_version=CARGO_VERSION,
+                tag=None,
+                output_dir=self.directory / "exact-byte-package",
+                root=root,
+            )
+        load_sources.assert_called_once_with(SOURCE_COMMIT, "clean_commit", root)
+        inspected = release.inspect_archive(
+            archive, root, expected_release_source_bytes=source_bytes
+        )
+        archive_root = f"scrub-v0.1.0-{release.TARGETS[0]}"
+        self.assertEqual(
+            inspected.members[f"{archive_root}/LICENSE"], source_bytes["LICENSE"]
+        )
+        self.assertEqual(
+            inspected.members[f"{archive_root}/THIRD_PARTY_NOTICES.md"],
+            source_bytes["THIRD_PARTY_NOTICES.md"],
+        )
+        self.assertEqual(
+            inspected.metadata["cargo_lock_sha256"],
+            release.sha256_bytes(source_bytes["Cargo.lock"]),
+        )
 
     def test_unknown_metadata_field_is_rejected(self) -> None:
         metadata = self.metadata()
